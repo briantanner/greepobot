@@ -52,9 +52,11 @@ __URLS__ = {
 	'juktas':'http://us34.grepolis.com',
 	'knossos':'http://us35.grepolis.com',
 	'lamia':'http://us36.grepolis.com',
-	'marathon':'http://us37.grepolis.com'
+	'marathon':'http://us37.grepolis.com',
+	'naxos':'http://us38.grepolis.com',
+	'olympia':'http://us39.grepolis.com'
 }
-defaultconfig = {"territorylimit": {}, "rangelimit": {}, "monitor": {}, "botadmins": ["soconius"], "last_scrape":{}, "world_scrape":{}, "feedback":{}}
+defaultconfig = {"territorylimit": {}, "rangelimit": {}, "monitor": {}, "botadmins": ["dev.lance"], "last_scrape":{}, "world_scrape":{}, "feedback":{}}
 
 def cfgcheck():   
 	
@@ -86,11 +88,11 @@ def cfgsave(settings):  ## save config file with current settings data
 
 
 def loadfile(server,datatype):  ### open gzip world file and read into memory
-	if not os.path.exists(currdir+"\\"+datadir): os.makedirs(currdir+"\\"+datadir)
-	if not os.path.exists(os.path.join((currdir+"\\"+datadir),server+"-"+datatype+".txt.gz")): getworlddata(server, __URLS__[server], datatype)
+	if not os.path.exists(currdir+"/"+datadir): os.makedirs(currdir+"/"+datadir)
+	if not os.path.exists(os.path.join((currdir+"/"+datadir),server+"-"+datatype+".txt.gz")): getworlddata(server, __URLS__[server], datatype)
 	
 		
-	localfile = os.path.join((currdir+"\\"+datadir),server+"-"+datatype+".txt.gz")
+	localfile = os.path.join((currdir+"/"+datadir),server+"-"+datatype+".txt.gz")
 	datafile = {}
 	if datatype == "conquers": datafile[datatype] = []
 	try:
@@ -131,21 +133,20 @@ def getactiveservers():
 	
 def getworlddata(server, url, datatype):
 	try:
-	
 		if datatype == "all":
-			urlretrieve('%s/data/%s.txt.gz' % (url,"players"),'%s\\%s\\%s-%s.txt.gz' % (currdir,datadir,server,"players"))
-			urlretrieve('%s/data/%s.txt.gz' % (url,"alliances"),'%s\\%s\\%s-%s.txt.gz' % (currdir,datadir,server,"alliances"))
-			urlretrieve('%s/data/%s.txt.gz' % (url,"towns"),'%s\\%s\\%s-%s.txt.gz' % (currdir,datadir,server,"towns"))
-			urlretrieve('%s/data/%s.txt.gz' % (url,"islands"),'%s\\%s\\%s-%s.txt.gz' % (currdir,datadir,server,"islands"))
-			urlretrieve('%s/data/%s.txt.gz' % (url,"player_kills_def"),'%s\\%s\\%s-%s.txt.gz' % (currdir,datadir,server,"player_kills_def"))
-			urlretrieve('%s/data/%s.txt.gz' % (url,"player_kills_att"),'%s\\%s\\%s-%s.txt.gz' % (currdir,datadir,server,"player_kills_att"))
-			urlretrieve('%s/data/%s.txt.gz' % (url,"conquers"),'%s\\%s\\%s-%s.txt.gz' % (currdir,datadir,server,"conquers"))
+			urlretrieve('%s/data/%s.txt.gz' % (url,"players"),'%s/%s/%s-%s.txt.gz' % (currdir,datadir,server,"players"))
+			urlretrieve('%s/data/%s.txt.gz' % (url,"alliances"),'%s/%s/%s-%s.txt.gz' % (currdir,datadir,server,"alliances"))
+			urlretrieve('%s/data/%s.txt.gz' % (url,"towns"),'%s/%s/%s-%s.txt.gz' % (currdir,datadir,server,"towns"))
+			urlretrieve('%s/data/%s.txt.gz' % (url,"islands"),'%s/%s/%s-%s.txt.gz' % (currdir,datadir,server,"islands"))
+			urlretrieve('%s/data/%s.txt.gz' % (url,"player_kills_def"),'%s/%s/%s-%s.txt.gz' % (currdir,datadir,server,"player_kills_def"))
+			urlretrieve('%s/data/%s.txt.gz' % (url,"player_kills_att"),'%s/%s/%s-%s.txt.gz' % (currdir,datadir,server,"player_kills_att"))
+			urlretrieve('%s/data/%s.txt.gz' % (url,"conquers"),'%s/%s/%s-%s.txt.gz' % (currdir,datadir,server,"conquers"))
 			
 			
 			if server not in settings["world_scrape"]: settings["world_scrape"][server] = []
 			settings["world_scrape"][server] = (int(time()))
 			cfgsave(settings)
-		else: urlretrieve('%s/data/%s.txt.gz' % (url,datatype),'%s\\%s\\%s-%s.txt.gz' % (currdir,datadir,server,datatype))
+		else: urlretrieve('%s/data/%s.txt.gz' % (url,datatype),'%s/%s/%s-%s.txt.gz' % (currdir,datadir,server,datatype))
 			  
 	except ValueError:
 		print "Problem Downloading World File"
@@ -241,7 +242,7 @@ def message_status(Message, Status):
 	elif cmd in ( 'DEFPOCH', 'DEFPOCHS',  ): Message.Chat.SendMessage('DEFPOCH command deprecated.  Use the MONITOR command instead')
 	
 	elif cmd in ( 'BOTSTATUS',  ): Message.Chat.SendMessage('7/1/2013: Grepolis Servers World data is failing to download from servers consistently.  This makes the Bot Angry and broken.  Opened ticket with Inno and lets see what comes of it. ') 
-	
+
 	elif cmd in ( 'BROADCAST',):  #### Need to fix this when no params are given it crashes. Add help as well.  Also need to fix chat room removal first.  Bot should cleanup chat rooms that do not have any monitors from its list.
 		if Message.FromHandle not in settings["botadmins"]: Message.Chat.SendMessage('Broadcast permission denied')
 		elif Message.FromHandle in settings["botadmins"]:
@@ -322,10 +323,11 @@ def message_status(Message, Status):
 			server = str(parms.split()[0].lower())
 			if server not in activeservers: 		# if server is not in list of monitored servers, download world files.
 				getworlddata(server,__URLS__[server],"all")
+				attsize = changecheck(__URLS__[server],'player_kills_att')
 				defsize = changecheck(__URLS__[server],'player_kills_def')									
 				consize = changecheck(__URLS__[server],'conquers')
 				if server not in settings["last_scrape"]: settings["last_scrape"][server] = []
-				settings["last_scrape"][server] = ((defsize, consize, int(time())))
+				settings["last_scrape"][server] = ((attsize, defsize, consize, int(time())))
 				if server not in settings["world_scrape"]: settings["world_scrape"][server] = []
 				settings["world_scrape"][server] = ((int(time())))
 				
@@ -416,6 +418,7 @@ def message_status(Message, Status):
 			found = find_alliance(server,alli_test)	
 			if found:	
 				alli_id,alli_name = found[0],found[1]				# set Alli ID and Alli name of the Alliance we are checking
+				servertowns = loadfile(server,"towns")
 				serverplayers = loadfile(server,"players")
 				serveralliances = loadfile(server,"alliances")
 				conquests = loadfile(server,"conquers")
@@ -425,18 +428,20 @@ def message_status(Message, Status):
 				for conquer in conquests["conquers"]:										# Look at each line in the conquests file
 					
 					town_id,c_time,winner,loser,winner_ally_id,loser_ally_id,town_points = conquer  #break them down into vars
+					town_name = unquote_plus(servertowns[town_id][1])
 					if int(c_time) + __CONLIMIT__ < int(time()): continue					# if the conquest is greater than 48 hours ago, move to the next one
 					if winner in members:													#if the winner is in the alliance we are checking.....
 						count += 1
-						loser_name = serverplayers[loser][0] if loser in serverplayers else 'a Ghost Town'
+						loser_name = serverplayers[loser][0] if loser in serverplayers else 'Ghost Town'
 						if loser_ally_id: loser_ally_name = alliance_name(server, loser_ally_id)
 						else: loser_ally_name = 'NO ALLIANCE' 
 						if not loser_ally_name: loser_ally_name = 'NO ALLIANCE' 
-						out = '%s    %s(%s) conquered %s (%s)\r\n' % (out,serverplayers[winner][0],alli_name,loser_name,loser_ally_name)
+						out = '%s    %s(%s) conquered %s (%s)\r\n' % (out,serverplayers[winner][0],alli_name,town_name,loser_name)
 					if loser in members:
 						count += 1
 						winner_alli_name = alliance_name(server,winner_ally_id) if winner_ally_id else 'NO ALLIANCE'
-						out='%s    %s (%s) was conquered by %s (%s)\r\n' % (out,serverplayers[loser][0],alliance_name(server, loser_ally_id),serverplayers[winner][0],winner_alli_name)
+						out='%s    %s (%s) was conquered by %s (%s)\r\n' % (out,town_name,serverplayers[loser][0],serverplayers[winner][0],winner_alli_name)
+						#out='%s    %s (%s) was conquered by %s (%s)\r\n' % (out,serverplayers[loser][0],alliance_name(server, loser_ally_id),serverplayers[winner][0],winner_alli_name)
 				out = '%s	[*] %s Conquests.' % (out, count)
 				sendmsg(out)
 						
@@ -906,6 +911,7 @@ def main():
 	settings = cfgcheck()
 	skype.Attach()
 	print('Skype attached.')
+	print(skype.CurrentUser.FullName)
 	skype.OnMessageStatus = message_status
 	nextscrape = 0
 	worldfilecheck = 0
@@ -924,22 +930,32 @@ def main():
 
 			for server in activeservers:														#Check server by server....
 				print("[%s] - %s" % (ctime(),server))
+				servertowns = loadfile(server,"towns")
 				serverplayers = loadfile(server,"players")
 				serveralliances = loadfile(server,"alliances")
+				attsize = changecheck(__URLS__[server],'player_kills_att')
 				defsize = changecheck(__URLS__[server],'player_kills_def')									#get the current size of the file on the grepolis server.
 				consize = changecheck(__URLS__[server],'conquers')									#get the current size of the file on the grepolis server.
 				
 				if not server in settings["last_scrape"]: settings["last_scrape"][server] = [0,0,int(time())]
-				if defsize != settings["last_scrape"][server][0]: 
+				if attsize != settings["last_scrape"][server][0]:
+					attcheck = True
+
+				if defsize != settings["last_scrape"][server][1]: 
 					defcheck = True
 					#print ("[%s] Found updated Def file for %s" % (ctime(), server)) #Remarked to save console window space
 				
-				if consize != settings["last_scrape"][server][1]: 
+				if consize != settings["last_scrape"][server][2]: 
 					concheck = True
 					#print ("[%s] Found updated Conquest file for %s" % (ctime(), server)) #Remarked to save console window space
 				
-				if defcheck or concheck:
+				if defcheck or concheck or attcheck:
 					checklist = {}
+					if attcheck:
+
+						acurrstats = loadfile(server,"player_kills_att")
+						getworlddata(server,__URLS__[server],"player_kills_att")
+						anewstats = loadfile(server,"player_kills_att")
 					if defcheck: 
 						
 						dcurrstats = loadfile(server,"player_kills_def")																	#load the current file into mem before download
@@ -971,9 +987,13 @@ def main():
 					
 					for chat in checklist:
 						player2check = []
+						aoutlist = {}
 						doutlist = {}
 						coutlist = {}
 						alli2check = {}
+						aoutlist[chat] = {}
+						aoutlist[chat]["alliances"] = {}
+						aoutlist[chat]["players"] = []
 						doutlist[chat] = {}
 						doutlist[chat]["alliances"] = {}
 						doutlist[chat]["players"] = []
@@ -990,9 +1010,15 @@ def main():
 							
 						if alli2check:
 							for alliance in alli2check:
+								if not alliance in aoutlist[chat]["alliances"]: aoutlist[chat]["alliances"][alliance] = []
 								if not alliance in doutlist[chat]["alliances"]: doutlist[chat]["alliances"][alliance] = []
 								if not alliance in coutlist[chat]["alliances"]: coutlist[chat]["alliances"][alliance] = []
 								for member in alli2check[alliance]:
+									if attcheck:
+										if member not in anewstats: continue
+										if member not in acurrstats: continue
+										if acurrstats[member] != anewstats[member]:
+											aoutlist[chat]["alliances"][alliance].append('%s: %s(+%s)' % (serverplayers[member][0], anewstats[member], (int(anewstats[member]) - int(acurrstats[member]))))
 									if defcheck:
 										if member not in dnewstats: continue
 										if member not in dcurrstats: continue
@@ -1012,14 +1038,19 @@ def main():
 													player_name = serverplayers[conquest[3]][0]			#otherwise get the players name
 												if not conquest[5]: alli_name = "No Alliance"				#assign No alliance if player is lone wolf
 												else: alli_name = alliance_name(server,conquest[5])			#Assign players alliance name  
-												coutlist[chat]["alliances"][alliance].append('%s(%s) conquered %s (%s)' % (serverplayers[conquest[2]][0],alliance_name(server,str(conquest[4])),player_name,alli_name))
+												town_name = unquote_plus(servertowns[conquest[0]][1])
+												coutlist[chat]["alliances"][alliance].append('%s(%s) conquered %s (%s)' % (serverplayers[conquest[2]][0],alliance_name(server,str(conquest[4])),town_name,player_name))
 											if member == conquest[3]:
-												coutlist[chat]["alliances"][alliance].append('%s (%s) was conquered by %s (%s)' % (serverplayers[conquest[3]][0],alliance_name(server,str(conquest[5])),serverplayers[conquest[2]][0],alliance_name(server,str(conquest[4]))))
+												coutlist[chat]["alliances"][alliance].append('%s (%s) was conquered by %s (%s)' % (town_name,serverplayers[conquest[3]][0],serverplayers[conquest[2]][0],alliance_name(server,str(conquest[4]))))
 									
 					
 						if player2check:
 							doutlist[chat]["players"] = []
 							for player in player2check:
+								if attcheck:
+									if str(player) not in acurrstats or anewstats: continue
+									if acurrstats[str(player)] != anewstats[str(player)]:
+										aoutlist[chat]["players"].append('%s: %d(+%s)' % (serverplayers[player][0], int(anewstats[player]), (int(anewstats[player]) - int(acurrstats[player]))))
 								if defcheck:
 									if str(player) not in dcurrstats or dnewstats: continue
 									if dcurrstats[str(player)] != dnewstats[str(player)]:
@@ -1031,10 +1062,33 @@ def main():
 											else: player_name = serverplayers[conquest[3]][0]
 											if not conquest[5]: alli_name = "No Alliance"
 											else: alli_name = alliance_name(server, conquest[5])
-											coutlist[chat]["players"].append('%s(%s) conquered %s (%s)' % (serverplayers[conquest[2]][0],alliance_name(server,str(conquest[4])),player_name,alli_name))
-										if player == conquest[3]: coutlist[chat]["players"].append('%s (%s) was conquered by %s (%s)' % (serverplayers[conquest[3]][0],alliance_name(server,str(conquest[5])),serverplayers[conquest[2]][0],alliance_name(server,str(conquest[4]))))
+											town_name = unquote_plus(servertowns[conquest[0]][1])
+											coutlist[chat]["players"].append('%s(%s) conquered %s (%s)' % (serverplayers[conquest[2]][0],alliance_name(server,str(conquest[4])),town_name,player_name))
+										if player == conquest[3]: coutlist[chat]["players"].append('%s (%s) was conquered by %s (%s)' % (town_name,serverplayers[conquest[3]][0],serverplayers[conquest[2]][0],alliance_name(server,str(conquest[4]))))
 								
+						if aoutlist[chat]["alliances"] or aoutlist[chat]["players"]:
+						
+							aout = []
+							for chat in aoutlist:
+								for alliance in aoutlist[chat]["alliances"]:
+									if len(aoutlist[chat]["alliances"][alliance]) == 0:continue
+									if len(aout) == 0: aout = unicode('(*) DBP Alerts!\r\n')
+									dout = '%s    %s (%s):\r\n' % (aout, alliance_name(server,str(alliance)),server)
 									
+									for alert in aoutlist[chat]["alliances"][alliance]:
+										aout = '%s        %s\r\n' % (aout,alert,)
+								for player in aoutlist[chat]["players"]:
+									if len(aoutlist[chat]["players"]) == 0:continue
+									if len(aout) == 0: aout = unicode('(*) ABP Alerts!\r\n')
+									#for alert in doutlist[chat]["players"]:
+									aout = '%s        %s\r\n' % (aout,player,)	
+										
+								if len(aout) > 0:
+									try:
+										newchat = skype.Chat(chat)
+										newchat.SendMessage(aout)
+									except Exception:
+										print ('unable to send message to %s' % (skype.Chat))			
 								
 						if doutlist[chat]["alliances"] or doutlist[chat]["players"]:
 						
@@ -1042,14 +1096,14 @@ def main():
 							for chat in doutlist:
 								for alliance in doutlist[chat]["alliances"]:
 									if len(doutlist[chat]["alliances"][alliance]) == 0:continue
-									if len(dout) == 0: dout = unicode('(*) DEFPOCH Alerts!\r\n')
+									if len(dout) == 0: dout = unicode('(*) DBP Alerts!\r\n')
 									dout = '%s    %s (%s):\r\n' % (dout, alliance_name(server,str(alliance)),server)
 									
 									for alert in doutlist[chat]["alliances"][alliance]:
 										dout = '%s        %s\r\n' % (dout,alert,)
 								for player in doutlist[chat]["players"]:
 									if len(doutlist[chat]["players"]) == 0:continue
-									if len(dout) == 0: dout = unicode('(*) DEFPOCH Alerts!\r\n')
+									if len(dout) == 0: dout = unicode('(*) DBP Alerts!\r\n')
 									#for alert in doutlist[chat]["players"]:
 									dout = '%s        %s\r\n' % (dout,player,)	
 										
@@ -1085,10 +1139,11 @@ def main():
 										newchat.SendMessage(cout)
 									except Exception:
 										print ('unable to send message to %s' % (skype.Chat))
-								
+					
+					attcheck = False
 					defcheck = False
 					concheck = False
-					settings["last_scrape"][server] = ((defsize, consize, int(time())))
+					settings["last_scrape"][server] = ((attsize, defsize, consize, int(time())))
 					
 					
 				
@@ -1120,7 +1175,7 @@ def main():
 			worldfilecheck = int(time()) + (60 * 20)
 		
 		if allimembercheck <= int(time()):
-			print("[%s] Begining Alliance Member Check" % (ctime()))
+			print("[%s] Beginning Alliance Member Check" % (ctime()))
 			activeservers = getactiveservers()
 			for server in activeservers:
 				print("%s - %s" % (ctime(),server))
