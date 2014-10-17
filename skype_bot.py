@@ -916,6 +916,7 @@ def main():
 	nextscrape = 0
 	worldfilecheck = 0
 	allimembercheck = 0
+	attcheck = False
 	defcheck = False
 	concheck = False
 	delchat = []
