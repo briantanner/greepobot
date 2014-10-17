@@ -218,7 +218,7 @@ def square(x):
 	return x * x
 
 def message_status(Message, Status):
-	if Status not in ('SENT','RECEIVED') or len(Message.Body) < 2 or Message.Body[0] != '>': return
+	if Status not in ('SENT','RECEIVED') or len(Message.Body) < 2 or Message.Body[0] != '>' or Message.Body[0] != '!': return
 	cmd = Message.Body.split()[0][1:].upper()
 	parms = '' if len(Message.Body.split()) < 2 else ' '.join(Message.Body.split()[1:])
 	#logging.info('Command: %s => %s (parms: %s)' % (Message.FromHandle,cmd,parms))
@@ -1124,7 +1124,7 @@ def main():
 									if len(coutlist[chat]["alliances"][alliance]) == 0: continue
 									if len(cout) == 0: cout = unicode('(*) Conquest Alerts!\r\n')
 									if len(coutlist[chat]["alliances"][alliance]) == 1: cout = '%s	1 Conquest by %s\r\n' % (cout, alliance_name(server,str(alliance)))
-									else: cout = '%s	%s Conquests by %s (%s)\r\n' % (cout, len(coutlist[chat]["alliances"][alliance]),alliance_name(server,str(alliance)),server)
+									else: cout = '%s    %s Conquests by %s (%s)\r\n' % (cout, len(coutlist[chat]["alliances"][alliance]),alliance_name(server,str(alliance)),server)
 
 									for alert in coutlist[chat]["alliances"][alliance]:
 										cout = '%s        %s\r\n' % (cout,alert,)
