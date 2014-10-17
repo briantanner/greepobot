@@ -1042,6 +1042,7 @@ def main():
 												town_name = unquote_plus(servertowns[conquest[0]][1])
 												coutlist[chat]["alliances"][alliance].append('%s(%s) conquered %s (%s)' % (serverplayers[conquest[2]][0],alliance_name(server,str(conquest[4])),town_name,player_name))
 											if member == conquest[3]:
+												town_name = unquote_plus(servertowns[conquest[0]][1])
 												coutlist[chat]["alliances"][alliance].append('%s (%s) was conquered by %s (%s)' % (town_name,serverplayers[conquest[3]][0],serverplayers[conquest[2]][0],alliance_name(server,str(conquest[4]))))
 									
 					
