@@ -13,7 +13,7 @@ skype = Skype4Py.skype.Skype()
 #bot1 = factory.create(ChatterBotType.CLEVERBOT)
 #bot1session = bot1.create_session()
 bot1session = cleverbot.Session()
-timeout = 10
+timeout = 30
 socket.setdefaulttimeout(timeout)
 
 __URLS__ = {
