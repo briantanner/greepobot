@@ -1072,8 +1072,8 @@ def main():
 							for chat in aoutlist:
 								for alliance in aoutlist[chat]["alliances"]:
 									if len(aoutlist[chat]["alliances"][alliance]) == 0:continue
-									if len(aout) == 0: aout = unicode('(*) DBP Alerts!\r\n')
-									dout = '%s    %s (%s):\r\n' % (aout, alliance_name(server,str(alliance)),server)
+									if len(aout) == 0: aout = unicode('(*) ABP Alerts!\r\n')
+									aout = '%s    %s (%s):\r\n' % (aout, alliance_name(server,str(alliance)),server)
 									
 									for alert in aoutlist[chat]["alliances"][alliance]:
 										aout = '%s        %s\r\n' % (aout,alert,)
