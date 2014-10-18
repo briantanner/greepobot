@@ -218,7 +218,8 @@ def square(x):
 	return x * x
 
 def message_status(Message, Status):
-	if Status not in ('SENT','RECEIVED') or len(Message.Body) < 2 or Message.Body[0] != '>' or Message.Body[0] != '!': return
+	if Status not in ('SENT','RECEIVED') or len(Message.Body) < 2: return
+	if Message.Body[0] not in ('>','!'): return
 	cmd = Message.Body.split()[0][1:].upper()
 	parms = '' if len(Message.Body.split()) < 2 else ' '.join(Message.Body.split()[1:])
 	#logging.info('Command: %s => %s (parms: %s)' % (Message.FromHandle,cmd,parms))
