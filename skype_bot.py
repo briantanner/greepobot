@@ -1217,7 +1217,7 @@ def main():
 								adddelta = set(newalliances[entry]).difference(alliances[entry])
 
 								if len(remdelta) >0 or len(adddelta) >0:
-									out= ("[!] Alliance Member Change: (%s) \r\n" % (server))
+									out= ("(handshake) Alliance Member Change: (%s) \r\n" % (server))
 								if len(adddelta) >0:
 									for player in adddelta:
 										out = ("%s		 Player %s joined %s\r\n" % (out, newserverplayers[player][0], alliance_name(server, entry)))
