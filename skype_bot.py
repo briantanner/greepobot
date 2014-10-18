@@ -1124,7 +1124,7 @@ def main():
 								for alliance in coutlist[chat]["alliances"]:
 									if len(coutlist[chat]["alliances"][alliance]) == 0: continue
 									if len(cout) == 0: cout = unicode('(*) Conquest Alerts!\r\n')
-									if len(coutlist[chat]["alliances"][alliance]) == 1: cout = '%s	1 Conquest by %s\r\n' % (cout, alliance_name(server,str(alliance)))
+									if len(coutlist[chat]["alliances"][alliance]) == 1: cout = '%s    1 Conquest by %s\r\n' % (cout, alliance_name(server,str(alliance)))
 									else: cout = '%s    %s Conquests by %s (%s)\r\n' % (cout, len(coutlist[chat]["alliances"][alliance]),alliance_name(server,str(alliance)),server)
 
 									for alert in coutlist[chat]["alliances"][alliance]:
