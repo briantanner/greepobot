@@ -96,26 +96,27 @@ def loadfile(server,datatype):  ### open gzip world file and read into memory
 	datafile = {}
 	if datatype == "conquers": datafile[datatype] = []
 	try:
-		with gzip.open(localfile, 'rb') as f:
-			for line in f:
-				
-				if datatype == "conquers":
-					if len(line.split(',')) < 7: #### some times the conquest file would have a line with just 4 items and the script would dump.  Need to handle cleaner
-						print ("Skipping line becaue too short")
-						continue	
-					datafile[datatype].append((line.split(',')[0], line.split(',')[1], line.split(',')[2], line.split(',')[3], line.split(',')[4], line.split(',')[5], line.split(',')[6].strip() ))
-				elif len(line.split(',')) == 7:
-					datafile[line.split(',')[0]] = ()
-					datafile[line.split(',')[0]] = (line.split(',')[1], line.split(',')[2], line.split(',')[3], line.split(',')[4], line.split(',')[5], line.split(',')[6].strip() )
-				elif len(line.split(',')) == 6:
-					datafile[line.split(',')[0]] = ()
-					datafile[line.split(',')[0]] = (unquote_plus(line.split(',')[1]), line.split(',')[2], line.split(',')[3], line.split(',')[4], line.split(',')[5].strip() )
-				elif len(line.split(',')) == 5:
-					datafile[line.split(',')[0]] = ()
-					datafile[line.split(',')[0]] = (line.split(',')[1], line.split(',')[2], line.split(',')[3], line.split(',')[4].strip() )
-				elif len(line.split(',')) == 3:
-					datafile[line.split(',')[1]] = ()
-					datafile[line.split(',')[1]] = (line.split(',')[2].strip() )
+		f = gzip.open(localfile, 'rb')
+		# with gzip.open(localfile, 'rb') as f:
+		for line in f:
+			
+			if datatype == "conquers":
+				if len(line.split(',')) < 7: #### some times the conquest file would have a line with just 4 items and the script would dump.  Need to handle cleaner
+					print ("Skipping line becaue too short")
+					continue	
+				datafile[datatype].append((line.split(',')[0], line.split(',')[1], line.split(',')[2], line.split(',')[3], line.split(',')[4], line.split(',')[5], line.split(',')[6].strip() ))
+			elif len(line.split(',')) == 7:
+				datafile[line.split(',')[0]] = ()
+				datafile[line.split(',')[0]] = (line.split(',')[1], line.split(',')[2], line.split(',')[3], line.split(',')[4], line.split(',')[5], line.split(',')[6].strip() )
+			elif len(line.split(',')) == 6:
+				datafile[line.split(',')[0]] = ()
+				datafile[line.split(',')[0]] = (unquote_plus(line.split(',')[1]), line.split(',')[2], line.split(',')[3], line.split(',')[4], line.split(',')[5].strip() )
+			elif len(line.split(',')) == 5:
+				datafile[line.split(',')[0]] = ()
+				datafile[line.split(',')[0]] = (line.split(',')[1], line.split(',')[2], line.split(',')[3], line.split(',')[4].strip() )
+			elif len(line.split(',')) == 3:
+				datafile[line.split(',')[1]] = ()
+				datafile[line.split(',')[1]] = (line.split(',')[2].strip() )
 	except EnvironmentError:
 		
 		#logging.warn("Unable to open file %s " % (localfile))
@@ -129,6 +130,9 @@ def getactiveservers():
 	for chat in settings['monitor']: 						
 				for server in settings['monitor'][chat]:
 					if server not in activeservers: activeservers.append(str(server))
+	for chat in settings["monitorghost"]:
+		for server in settings["monitorghost"][chat]:
+			if server not in activeservers: activeservers.append(str(server))
 	return activeservers
 	
 def getworlddata(server, url, datatype):
@@ -222,24 +226,27 @@ def town_in_ocean(town,ocean):
 	return town_ocean == ocean
 
 def towns_by_ocean(towns,ocean):
-	rettowns = []
-	for town in towns:
+	rettowns = {}
+	for id in towns:
+		town = towns[id]
 		if town_in_ocean(town,ocean):
-			rettowns.append(town)
+			rettowns[id] = town
 	return rettowns
 
 def player_towns_by_ocean(towns,ocean):
-	rettowns = []
-	for town in towns:
-		if town_in_ocean(town,ocean) and len(town[1]) > 0:
-			rettowns.append(town)
+	rettowns = {}
+	for id in towns:
+		town = towns[id]
+		if town_in_ocean(town,ocean) and len(town[0]) > 0:
+			rettowns[id] = town
 	return rettowns
 
 def ghosts_by_ocean(towns,ocean):
-	rettowns = []
-	for town in towns:
-		if town_in_ocean(town,ocean) and not len(town[1]):
-			rettowns.append(town)
+	rettowns = {}
+	for id in towns:
+		town = towns[id]
+		if town_in_ocean(town,ocean) and not len(town[0]):
+			rettowns[id] = town
 	return rettowns
 
 def message_status(Message, Status):
@@ -267,7 +274,7 @@ def message_status(Message, Status):
 	
 	elif cmd in ( 'DEFPOCH', 'DEFPOCHS',  ): Message.Chat.SendMessage('DEFPOCH command deprecated.  Use the MONITOR command instead')
 	
-	elif cmd in ( 'BOTSTATUS',  ): Message.Chat.SendMessage('7/1/2013: Grepolis Servers World data is failing to download from servers consistently.  This makes the Bot Angry and broken.  Opened ticket with Inno and lets see what comes of it. ') 
+	elif cmd in ( 'BOTSTATUS',  ): Message.Chat.SendMessage('10/19/2014: Testing MONITORGHOST. ') 
 
 	elif cmd in ( 'BROADCAST',):  #### Need to fix this when no params are given it crashes. Add help as well.  Also need to fix chat room removal first.  Bot should cleanup chat rooms that do not have any monitors from its list.
 		if Message.FromHandle not in settings["botadmins"]: Message.Chat.SendMessage('Broadcast permission denied')
@@ -340,11 +347,12 @@ def message_status(Message, Status):
 			#else: Message.Chat.SendMessage("Unknown Player")
 
 	elif cmd in ('MONITORGHOST',):
+		activeservers = getactiveservers()
 		if len(parms.split()) < 2:
 			sendmsg('[*] Syntax: MONITORGHOST <server> <ocean>')
 		elif parms.split()[0].lower() not in __URLS__:
 			Message.Chat.SendMessage('[*] Inavlid or unsupported server')
-		elif not parms.split()[1].isdigit() or parms.split()[1] < 1 or parms.split()[1] > 99:
+		elif not parms.split()[1].isdigit() or int(parms.split()[1]) < 1 or int(parms.split()[1]) > 99:
 			sendmsg('[*] Invalid ocean')
 		else:
 			server = parms.split()[0].lower()
@@ -1007,61 +1015,60 @@ def main():
 					townsize = changecheck(__URLS__[server],'towns')
 					if townsize != settings["ghost_scrape"][server][0]:
 						towncheck = True
-
 					if towncheck:
 						checklist = {}
 						currtowns = loadfile(server,"towns")
 						getworlddata(server,__URLS__[server],"towns")
 						newtowns = loadfile(server,"towns")
-					for chat in settings["monitorghost"]:
-						try:
-							if skype.Chat(chat).MyStatus != "SUBSCRIBED":
-								if chat not in delchat:
-									print("Adding Chat %s to delete list because of Status: %s" % (skype.Chat(chat).FriendlyName, skype.Chat(chat).MyStatus))
-									delchat.append(chat)
-								continue
-						except Exception:
-							pass
-						if chat not in checklist:
-							checklist[chat] = []
-						if server not in settings["monitorghost"][chat]: continue
-						for item in settings["monitorghost"][chat][server]:
-							checklist[chat].append(item)
+						for chat in settings["monitorghost"]:
+							try:
+								if skype.Chat(chat).MyStatus != "SUBSCRIBED":
+									if chat not in delchat:
+										print("Adding Chat %s to delete list because of Status: %s" % (skype.Chat(chat).FriendlyName, skype.Chat(chat).MyStatus))
+										delchat.append(chat)
+									continue
+							except Exception:
+								pass
+							if chat not in checklist:
+								checklist[chat] = []
+							if server not in settings["monitorghost"][chat]: continue
+							for item in settings["monitorghost"][chat][server]:
+								checklist[chat].append(item)
 
-					for chat in checklist:
-						toutlist = {}
-						toutlist[chat] = {}
-						toutlist[chat]["towns"] = {}
+						for chat in checklist:
+							toutlist = {}
+							toutlist[chat] = {}
+							toutlist[chat]["towns"] = {}
 
-						for ocean in checklist[chat]:
-							if not ocean in toutlist[chat]["towns"]: toutlist[chat]["towns"][ocean] = []
-							playertowns = player_towns_by_ocean(currtowns,ocean)
-							ghosttowns = ghosts_by_ocean(newtowns,ocean)
-							for ghost in ghosttowns:
-								if ghost[0] in playertowns:
-									playertown = playertowns[ghost[0]]
-									player = serverplayers[playertown[1]]
-									ghostocean = int('%s%s' % (str(ghost[2][0]),str(ghost[3][0])))
-									# 'Format: Add Town (Player) -> Town (Ghost)'
-									# '%s (%s) -> %s (%s) %s pts' % (ghost[1],player[0],ghost[1],'Ghost',ghost[5])
-									toutlist[chat]["towns"][ghostocean].append('%s (%s) -> %s (%s) %s pts' % (ghost[1],player[0],ghost[1],'Ghost',ghost[5]))
+							for ocean in checklist[chat]:
+								if not ocean in toutlist[chat]["towns"]: toutlist[chat]["towns"][ocean] = []
+								playertowns = player_towns_by_ocean(currtowns,ocean)
+								ghosttowns = ghosts_by_ocean(newtowns,ocean)
+								for id in ghosttowns:
+									ghost = ghosttowns[id]
+									if id in playertowns:
+										playertown = playertowns[id]
+										player = serverplayers[playertown[0]]
+										ghostocean = int('%s%s' % (str(ghost[2][0]),str(ghost[3][0])))
+										toutlist[chat]["towns"][ghostocean].append('%s (%s) -> %s (%s) %s pts' % (unquote_plus(ghost[1]),player[0],unquote_plus(ghost[1]),'Ghost',ghost[5]))
 
 							if toutlist[chat]["towns"]:
 								tout = []
 								for chat in toutlist:
 									for ocean in toutlist[chat]["towns"]:
 										if len(toutlist[chat]["towns"][ocean]) == 0: continue
-										if len(tout) == 0: tout = unicode('(tumbleweed) Ghost Alerts!\r\n')
+										if len(tout) == 0: 
+											tout = unicode('(tumbleweed) Ghost Alerts!\r\n')
 										tout = '%s    Ocean %s\r\n' % (tout,ocean,)
 
 										for alert in toutlist[chat]["towns"][ocean]:
 											tout = '%s        %s\r\n' % (tout,alert,)
-									if len(tout) > 0:
-										try:
-											newchat = skype.Chat(chat)
-											newchat.SendMessage(tout)
-										except Exception:
-											print('unable to send message to %s' % (skype.Chat))
+								if len(tout) > 0:
+									try:
+										newchat = skype.Chat(chat)
+										newchat.SendMessage(tout)
+									except Exception:
+										print('unable to send message to %s' % (skype.Chat))
 					towncheck = False
 					settings["ghost_scrape"][server] = ((townsize,int(time())))
 
