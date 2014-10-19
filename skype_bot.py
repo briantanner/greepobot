@@ -1,4 +1,4 @@
-import json, os, logging, gzip, Skype4Py, operator, math, socket, cleverbot
+import json, os, logging, gzip, Skype4Py, operator, math, socket
 from urllib import urlretrieve,unquote_plus
 from urllib2 import Request,urlopen
 from time import time, ctime, sleep
@@ -12,7 +12,7 @@ skype = Skype4Py.skype.Skype()
 #factory = ChatterBotFactory()
 #bot1 = factory.create(ChatterBotType.CLEVERBOT)
 #bot1session = bot1.create_session()
-bot1session = cleverbot.Session()
+# bot1session = cleverbot.Session()
 timeout = 30
 socket.setdefaulttimeout(timeout)
 
@@ -256,14 +256,14 @@ def message_status(Message, Status):
 		Message.Chat.SendMessage('[*] Available commands: BOTSTATUS, CONQUESTS, EASYMONEY, FEEDBACK, HELP, LISTALLI, MONITOR, MONITORLIST, NEARGHOST, NEARPLAYER, NEARALLI, PLAYER, RANGELIMIT, TOWNS, TERRITORY, TOPRANK')
 
 	
-	elif cmd in ('BOT',):
-		if len(parms.split()) < 1:
-			Message.Chat.SendMessage('Converse with the bot at your own risk.  Example: >bot Hello there!')
-		else:
-			#print ('%s' % (parms))
-			#s = bot1session.think(parms)
-			s = bot1session.Ask(parms)
-			Message.Chat.SendMessage(s)
+	# elif cmd in ('BOT',):
+	# 	if len(parms.split()) < 1:
+	# 		Message.Chat.SendMessage('Converse with the bot at your own risk.  Example: >bot Hello there!')
+	# 	else:
+	# 		#print ('%s' % (parms))
+	# 		#s = bot1session.think(parms)
+	# 		s = bot1session.Ask(parms)
+	# 		Message.Chat.SendMessage(s)
 	
 	elif cmd in ( 'DEFPOCH', 'DEFPOCHS',  ): Message.Chat.SendMessage('DEFPOCH command deprecated.  Use the MONITOR command instead')
 	
