@@ -362,25 +362,26 @@ def message_status(Message, Status):
 				townsize = changecheck(__URLS__[server],"towns")
 				if server not in settings["ghost_scrape"]: settings["ghost_scrape"][server] = []
 				settings["ghost_scrape"][server] = ((townsize, int(time())))
-				if Message.Chat.Name in settings["monitorghost"]:
-					if server in settings["monitorghost"][Message.Chat.Name]:
-						if ocean in settings["monitorghost"][Message.Chat.Name][server]:
-							settings["monitorghost"][Message.Chat.Name][server].remove(ocean)
-							Message.Chat.SendMessage('[*] Monitor Disabled for this channel.')
-						else:
-							settings["monitorghost"][Message.Chat.Name][server].append(ocean)
-							Message.Chat.SendMessage('[*] Monitor Enabled for this channel. Repeat this command to disable.')
+			
+			if Message.Chat.Name in settings["monitorghost"]:
+				if server in settings["monitorghost"][Message.Chat.Name]:
+					if ocean in settings["monitorghost"][Message.Chat.Name][server]:
+						settings["monitorghost"][Message.Chat.Name][server].remove(ocean)
+						Message.Chat.SendMessage('[*] Monitor Disabled for this channel.')
 					else:
-						settings["monitorghost"][Message.Chat.Name][server] = []
 						settings["monitorghost"][Message.Chat.Name][server].append(ocean)
-
 						Message.Chat.SendMessage('[*] Monitor Enabled for this channel. Repeat this command to disable.')
 				else:
-					settings["monitorghost"][Message.Chat.Name] = {}
 					settings["monitorghost"][Message.Chat.Name][server] = []
 					settings["monitorghost"][Message.Chat.Name][server].append(ocean)
 
 					Message.Chat.SendMessage('[*] Monitor Enabled for this channel. Repeat this command to disable.')
+			else:
+				settings["monitorghost"][Message.Chat.Name] = {}
+				settings["monitorghost"][Message.Chat.Name][server] = []
+				settings["monitorghost"][Message.Chat.Name][server].append(ocean)
+
+				Message.Chat.SendMessage('[*] Monitor Enabled for this channel. Repeat this command to disable.')
 
 			cfgsave(settings)
 
