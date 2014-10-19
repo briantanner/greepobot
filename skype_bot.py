@@ -56,7 +56,7 @@ __URLS__ = {
 	'naxos':'http://us38.grepolis.com',
 	'olympia':'http://us39.grepolis.com'
 }
-defaultconfig = {"territorylimit": {}, "rangelimit": {}, "monitor": {}, "botadmins": ["dev.lance"], "last_scrape":{}, "world_scrape":{}, "feedback":{}}
+defaultconfig = {"territorylimit": {}, "rangelimit": {}, "monitor": {}, "monitorghost": {}, "botadmins": ["dev.lance"], "last_scrape":{}, "world_scrape":{}, "ghost_scrape":{}, "feedback":{}}
 
 def cfgcheck():   
 	
@@ -217,6 +217,31 @@ def find_island(server,x,y):
 def square(x):
 	return x * x
 
+def town_in_ocean(town,ocean):
+	town_ocean = int('%s%s' % (str(town[2][0]),str(town[3][0])))
+	return town_ocean == ocean
+
+def towns_by_ocean(towns,ocean):
+	rettowns = []
+	for town in towns:
+		if town_in_ocean(town,ocean):
+			rettowns.append(town)
+	return rettowns
+
+def player_towns_by_ocean(towns,ocean):
+	rettowns = []
+	for town in towns:
+		if town_in_ocean(town,ocean) and len(town[1]) > 0:
+			rettowns.append(town)
+	return rettowns
+
+def ghosts_by_ocean(towns,ocean):
+	rettowns = []
+	for town in towns:
+		if town_in_ocean(town,ocean) and not len(town[1]):
+			rettowns.append(town)
+	return rettowns
+
 def message_status(Message, Status):
 	if Status not in ('SENT','RECEIVED') or len(Message.Body) < 2: return
 	if Message.Body[0] not in ('>','!'): return
@@ -313,6 +338,44 @@ def message_status(Message, Status):
 						# print (line)
 				#Message.Chat.SendMessage(out)
 			#else: Message.Chat.SendMessage("Unknown Player")
+
+	elif cmd in ('MONITORGHOST',):
+		if len(parms.split()) < 2:
+			sendmsg('[*] Syntax: MONITORGHOST <server> <ocean>')
+		elif parms.split()[0].lower() not in __URLS__:
+			Message.Chat.SendMessage('[*] Inavlid or unsupported server')
+		elif not parms.split()[1].isdigit() or parms.split()[1] < 1 or parms.split()[1] > 99:
+			sendmsg('[*] Invalid ocean')
+		else:
+			server = parms.split()[0].lower()
+			ocean = int(parms.split()[1])
+			if server not in activeservers:
+				getworlddata(server,__URLS__[server],"all")
+				townsize = changecheck(__URLS__[server],"towns")
+				if server not in settings["ghost_scrape"]: settings["ghost_scrape"][server] = []
+				settings["ghost_scrape"][server] = ((townsize, int(time())))
+				if Message.Chat.Name in settings["monitorghost"]:
+					if server in settings["monitorghost"][Message.Chat.Name]:
+						if ocean in settings["monitorghost"][Message.Chat.Name][server]:
+							settings["monitorghost"][Message.Chat.Name][server].remove(ocean)
+							Message.Chat.SendMessage('[*] Monitor Disabled for this channel.')
+						else:
+							settings["monitorghost"][Message.Chat.Name][server].append(ocean)
+							Message.Chat.SendMessage('[*] Monitor Enabled for this channel. Repeat this command to disable.')
+					else:
+						settings["monitorghost"][Message.Chat.Name][server] = []
+						settings["monitorghost"][Message.Chat.Name][server].append(ocean)
+
+						Message.Chat.SendMessage('[*] Monitor Enabled for this channel. Repeat this command to disable.')
+				else:
+					settings["monitorghost"][Message.Chat.Name] = {}
+					settings["monitorghost"][Message.Chat.Name][server] = []
+					settings["monitorghost"][Message.Chat.Name][server].append(ocean)
+
+					Message.Chat.SendMessage('[*] Monitor Enabled for this channel. Repeat this command to disable.')
+
+			cfgsave(settings)
+
 	elif cmd in ('MONITOR',):
 		activeservers = getactiveservers()
 		found = []
@@ -556,7 +619,6 @@ def message_status(Message, Status):
 			Message.Chat.SendMessage(out)
 		else:
 			Message.Chat.SendMessage('[*] No match found for that player.')
-	
 	
 	elif cmd in ('EASYMONEY',):
 	
@@ -905,7 +967,7 @@ def message_status(Message, Status):
 	
 	else:
 		Message.Chat.SendMessage('Unrecognized command: %s' % (cmd))
-	
+
 def main():
 	global settings
 	activeservers = []
@@ -920,6 +982,7 @@ def main():
 	attcheck = False
 	defcheck = False
 	concheck = False
+	towncheck = False
 	delchat = []
 	
 	
@@ -939,6 +1002,69 @@ def main():
 				defsize = changecheck(__URLS__[server],'player_kills_def')									#get the current size of the file on the grepolis server.
 				consize = changecheck(__URLS__[server],'conquers')									#get the current size of the file on the grepolis server.
 				
+				if not server in settings["ghost_scrape"]: settings["ghost_scrape"][server] = [0,int(time())]
+				if server in settings["ghost_scrape"]:
+					townsize = changecheck(__URLS__[server],'towns')
+					if townsize != settings["ghost_scrape"][server][0]:
+						towncheck = True
+
+					if towncheck:
+						checklist = {}
+						currtowns = loadfile(server,"towns")
+						getworlddata(server,__URLS__[server],"towns")
+						newtowns = loadfile(server,"towns")
+					for chat in settings["monitorghost"]:
+						try:
+							if skype.Chat(chat).MyStatus != "SUBSCRIBED":
+								if chat not in delchat:
+									print("Adding Chat %s to delete list because of Status: %s" % (skype.Chat(chat).FriendlyName, skype.Chat(chat).MyStatus))
+									delchat.append(chat)
+								continue
+						except Exception:
+							pass
+						if chat not in checklist:
+							checklist[chat] = []
+						if server not in settings["monitorghost"][chat]: continue
+						for item in settings["monitorghost"][chat][server]:
+							checklist[chat].append(item)
+
+					for chat in checklist:
+						toutlist = {}
+						toutlist[chat] = {}
+						toutlist[chat]["towns"] = {}
+
+						for ocean in checklist[chat]:
+							if not ocean in toutlist[chat]["towns"]: toutlist[chat]["towns"][ocean] = []
+							playertowns = player_towns_by_ocean(currtowns,ocean)
+							ghosttowns = ghosts_by_ocean(newtowns,ocean)
+							for ghost in ghosttowns:
+								if ghost[0] in playertowns:
+									playertown = playertowns[ghost[0]]
+									player = serverplayers[playertown[1]]
+									ghostocean = int('%s%s' % (str(ghost[2][0]),str(ghost[3][0])))
+									# 'Format: Add Town (Player) -> Town (Ghost)'
+									# '%s (%s) -> %s (%s) %s pts' % (ghost[1],player[0],ghost[1],'Ghost',ghost[5])
+									toutlist[chat]["towns"][ghostocean].append('%s (%s) -> %s (%s) %s pts' % (ghost[1],player[0],ghost[1],'Ghost',ghost[5]))
+
+							if toutlist[chat]["towns"]:
+								tout = []
+								for chat in toutlist:
+									for ocean in toutlist[chat]["towns"]:
+										if len(toutlist[chat]["towns"][ocean]) == 0: continue
+										if len(tout) == 0: tout = unicode('(tumbleweed) Ghost Alerts!\r\n')
+										tout = '%s    Ocean %s\r\n' % (tout,ocean,)
+
+										for alert in toutlist[chat]["towns"][ocean]:
+											tout = '%s        %s\r\n' % (tout,alert,)
+									if len(tout) > 0:
+										try:
+											newchat = skype.Chat(chat)
+											newchat.SendMessage(tout)
+										except Exception:
+											print('unable to send message to %s' % (skype.Chat))
+					towncheck = False
+					settings["ghost_scrape"][server] = ((townsize,int(time())))
+
 				if not server in settings["last_scrape"]: settings["last_scrape"][server] = [0,0,int(time())]
 				if attsize != settings["last_scrape"][server][0]:
 					attcheck = True
