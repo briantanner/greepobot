@@ -1,18 +1,13 @@
-import json, os, logging, gzip, Skype4Py, operator, math, socket, cleverbot
+import json, os, logging, gzip, Skype4Py, operator, math, socket
 from urllib import urlretrieve,unquote_plus
 from urllib2 import Request,urlopen
 from time import time, ctime, sleep
-#from chatterbotapi import ChatterBotFactory, ChatterBotType
 from BeautifulSoup import BeautifulSoup
 currdir = os.getcwd()
 cfgfile = 'bot.cfg' #the file where we store defpochs/conqeusts and other info
 datadir = 'data_files' # directory where we store world data files.
 #logging.basicConfig(filename='skype_bot.log',level=logging.DEBUG, format='%(asctime)s %(message)s')
 skype = Skype4Py.skype.Skype()
-#factory = ChatterBotFactory()
-#bot1 = factory.create(ChatterBotType.CLEVERBOT)
-#bot1session = bot1.create_session()
-bot1session = cleverbot.Session()
 timeout = 30
 socket.setdefaulttimeout(timeout)
 
@@ -56,7 +51,7 @@ __URLS__ = {
 	'naxos':'http://us38.grepolis.com',
 	'olympia':'http://us39.grepolis.com'
 }
-defaultconfig = {"territorylimit": {}, "rangelimit": {}, "monitor": {}, "botadmins": ["dev.lance"], "last_scrape":{}, "world_scrape":{}, "feedback":{}}
+defaultconfig = {"territorylimit": {}, "rangelimit": {}, "monitor": {}, "monitorghost": {}, "botadmins": ["dev.lance"], "last_scrape":{}, "world_scrape":{}, "ghost_scrape":{}, "feedback":{}}
 
 def cfgcheck():   
 	
@@ -96,26 +91,27 @@ def loadfile(server,datatype):  ### open gzip world file and read into memory
 	datafile = {}
 	if datatype == "conquers": datafile[datatype] = []
 	try:
-		with gzip.open(localfile, 'rb') as f:
-			for line in f:
-				
-				if datatype == "conquers":
-					if len(line.split(',')) < 7: #### some times the conquest file would have a line with just 4 items and the script would dump.  Need to handle cleaner
-						print ("Skipping line becaue too short")
-						continue	
-					datafile[datatype].append((line.split(',')[0], line.split(',')[1], line.split(',')[2], line.split(',')[3], line.split(',')[4], line.split(',')[5], line.split(',')[6].strip() ))
-				elif len(line.split(',')) == 7:
-					datafile[line.split(',')[0]] = ()
-					datafile[line.split(',')[0]] = (line.split(',')[1], line.split(',')[2], line.split(',')[3], line.split(',')[4], line.split(',')[5], line.split(',')[6].strip() )
-				elif len(line.split(',')) == 6:
-					datafile[line.split(',')[0]] = ()
-					datafile[line.split(',')[0]] = (unquote_plus(line.split(',')[1]), line.split(',')[2], line.split(',')[3], line.split(',')[4], line.split(',')[5].strip() )
-				elif len(line.split(',')) == 5:
-					datafile[line.split(',')[0]] = ()
-					datafile[line.split(',')[0]] = (line.split(',')[1], line.split(',')[2], line.split(',')[3], line.split(',')[4].strip() )
-				elif len(line.split(',')) == 3:
-					datafile[line.split(',')[1]] = ()
-					datafile[line.split(',')[1]] = (line.split(',')[2].strip() )
+		f = gzip.open(localfile, 'rb')
+		# with gzip.open(localfile, 'rb') as f:
+		for line in f:
+			
+			if datatype == "conquers":
+				if len(line.split(',')) < 7: #### some times the conquest file would have a line with just 4 items and the script would dump.  Need to handle cleaner
+					print ("Skipping line becaue too short")
+					continue	
+				datafile[datatype].append((line.split(',')[0], line.split(',')[1], line.split(',')[2], line.split(',')[3], line.split(',')[4], line.split(',')[5], line.split(',')[6].strip() ))
+			elif len(line.split(',')) == 7:
+				datafile[line.split(',')[0]] = ()
+				datafile[line.split(',')[0]] = (line.split(',')[1], line.split(',')[2], line.split(',')[3], line.split(',')[4], line.split(',')[5], line.split(',')[6].strip() )
+			elif len(line.split(',')) == 6:
+				datafile[line.split(',')[0]] = ()
+				datafile[line.split(',')[0]] = (unquote_plus(line.split(',')[1]), line.split(',')[2], line.split(',')[3], line.split(',')[4], line.split(',')[5].strip() )
+			elif len(line.split(',')) == 5:
+				datafile[line.split(',')[0]] = ()
+				datafile[line.split(',')[0]] = (line.split(',')[1], line.split(',')[2], line.split(',')[3], line.split(',')[4].strip() )
+			elif len(line.split(',')) == 3:
+				datafile[line.split(',')[1]] = ()
+				datafile[line.split(',')[1]] = (line.split(',')[2].strip() )
 	except EnvironmentError:
 		
 		#logging.warn("Unable to open file %s " % (localfile))
@@ -129,6 +125,9 @@ def getactiveservers():
 	for chat in settings['monitor']: 						
 				for server in settings['monitor'][chat]:
 					if server not in activeservers: activeservers.append(str(server))
+	for chat in settings["monitorghost"]:
+		for server in settings["monitorghost"][chat]:
+			if server not in activeservers: activeservers.append(str(server))
 	return activeservers
 	
 def getworlddata(server, url, datatype):
@@ -217,6 +216,34 @@ def find_island(server,x,y):
 def square(x):
 	return x * x
 
+def town_in_ocean(town,ocean):
+	town_ocean = int('%s%s' % (str(town[2][0]),str(town[3][0])))
+	return town_ocean == ocean
+
+def towns_by_ocean(towns,ocean):
+	rettowns = {}
+	for id in towns:
+		town = towns[id]
+		if town_in_ocean(town,ocean):
+			rettowns[id] = town
+	return rettowns
+
+def player_towns_by_ocean(towns,ocean):
+	rettowns = {}
+	for id in towns:
+		town = towns[id]
+		if town_in_ocean(town,ocean) and len(town[0]) > 0:
+			rettowns[id] = town
+	return rettowns
+
+def ghosts_by_ocean(towns,ocean):
+	rettowns = {}
+	for id in towns:
+		town = towns[id]
+		if town_in_ocean(town,ocean) and not len(town[0]):
+			rettowns[id] = town
+	return rettowns
+
 def message_status(Message, Status):
 	if Status not in ('SENT','RECEIVED') or len(Message.Body) < 2: return
 	if Message.Body[0] not in ('>','!'): return
@@ -224,102 +251,94 @@ def message_status(Message, Status):
 	parms = '' if len(Message.Body.split()) < 2 else ' '.join(Message.Body.split()[1:])
 	#logging.info('Command: %s => %s (parms: %s)' % (Message.FromHandle,cmd,parms))
 	print ('Command: %s => %s (parms: %s)' % (Message.FromHandle,cmd,parms))
-	sendmsg = Message.Chat.SendMessage
+	SendMessage = Message.Chat.SendMessage
 	
 
 	if cmd in ('HELP','COMMANDS', '?'):
-		Message.Chat.SendMessage('[*] Available commands: BOTSTATUS, CONQUESTS, EASYMONEY, FEEDBACK, HELP, LISTALLI, MONITOR, MONITORLIST, NEARGHOST, NEARPLAYER, NEARALLI, PLAYER, RANGELIMIT, TOWNS, TERRITORY, TOPRANK')
+		SendMessage('[*] Available commands: BOTSTATUS, CONQUESTS, EASYMONEY, FEEDBACK, HELP, LISTALLI, MONITOR, MONITORLIST, NEARGHOST, NEARPLAYER, NEARALLI, PLAYER, RANGELIMIT, TOWNS, TERRITORY, TOPRANK')
 
 	
-	elif cmd in ('BOT',):
-		if len(parms.split()) < 1:
-			Message.Chat.SendMessage('Converse with the bot at your own risk.  Example: >bot Hello there!')
-		else:
-			#print ('%s' % (parms))
-			#s = bot1session.think(parms)
-			s = bot1session.Ask(parms)
-			Message.Chat.SendMessage(s)
+	# elif cmd in ('BOT',):
+	# 	if len(parms.split()) < 1:
+	# 		SendMessage('Converse with the bot at your own risk.  Example: >bot Hello there!')
+	# 	else:
+	# 		#print ('%s' % (parms))
+	# 		#s = bot1session.think(parms)
+	# 		s = bot1session.Ask(parms)
+	# 		SendMessage(s)
 	
-	elif cmd in ( 'DEFPOCH', 'DEFPOCHS',  ): Message.Chat.SendMessage('DEFPOCH command deprecated.  Use the MONITOR command instead')
+	elif cmd in ( 'DEFPOCH', 'DEFPOCHS',  ): SendMessage('DEFPOCH command deprecated.  Use the MONITOR command instead')
 	
-	elif cmd in ( 'BOTSTATUS',  ): Message.Chat.SendMessage('7/1/2013: Grepolis Servers World data is failing to download from servers consistently.  This makes the Bot Angry and broken.  Opened ticket with Inno and lets see what comes of it. ') 
+	elif cmd in ( 'BOTSTATUS',  ): SendMessage('10/19/2014: Testing MONITORGHOST. ') 
 
 	elif cmd in ( 'BROADCAST',):  #### Need to fix this when no params are given it crashes. Add help as well.  Also need to fix chat room removal first.  Bot should cleanup chat rooms that do not have any monitors from its list.
-		if Message.FromHandle not in settings["botadmins"]: Message.Chat.SendMessage('Broadcast permission denied')
+		if Message.FromHandle not in settings["botadmins"]: SendMessage('Broadcast permission denied')
 		elif Message.FromHandle in settings["botadmins"]:
 			bcast = ' '.join(parms.split()[0:])
-			Message.Chat.SendMessage('Broadcasting this message to %s Chats: %s ' % (len(settings["monitor"]), bcast))
+			SendMessage('Broadcasting this message to %s Chats: %s ' % (len(settings["monitor"]), bcast))
 			for chat in settings["monitor"]:
 				skype.Chat(chat).SendMessage(bcast)
 				
 	elif cmd in ( 'FEEDBACK', ):
 			if "feedback" not in settings: settings["feedback"] = {}
-			if len(parms.split()) < 1: Message.Chat.SendMessage('Have a suggestion for a new command or feature? Let the BotMaster know using the feedback command.\r\n Example: >feedback Can we get a command that does ...')
-			elif len(parms.split()) < 5: Message.Chat.SendMessage('That\'s not very much to say, can you elaborate?')
+			if len(parms.split()) < 1: SendMessage('Have a suggestion for a new command or feature? Let the BotMaster know using the feedback command.\r\n Example: >feedback Can we get a command that does ...')
+			elif len(parms.split()) < 5: SendMessage('That\'s not very much to say, can you elaborate?')
 			else:
 				if Message.FromHandle not in settings["feedback"]: settings["feedback"][Message.FromHandle] = []
 				
-				if len(settings["feedback"][Message.FromHandle]) > 6 : Message.Chat.SendMessage('Sorry %s, Too Many Feedback Messages submitted. Please try again later' % (Message.FromHandle))
+				if len(settings["feedback"][Message.FromHandle]) > 6 : SendMessage('Sorry %s, Too Many Feedback Messages submitted. Please try again later' % (Message.FromHandle))
 				
 				elif len(settings["feedback"][Message.FromHandle]) < 6 : 
-					Message.Chat.SendMessage('Thank you %s for your message it has been logged ' % (Message.FromHandle))
+					SendMessage('Thank you %s for your message it has been logged ' % (Message.FromHandle))
 					settings["feedback"][Message.FromHandle].append(' '.join(parms.split()[0:]))
 					cfgsave(settings)
-	
-	# elif cmd in ('PLAYER_ACTIVITY',):
-		# if len(parms.split()) < 2:
-			# Message.Chat.SendMessage('[*] Syntax: PLAYER_ACTIVITY <server> <player>\r\n EXAMPLE: >player_activity delta fortyfour \r\n Description: Returns a players recent Defense, Attack and City Point gains')
-		# elif parms.split()[0].lower() not in __URLS__: Message.Chat.SendMessage('[*] Invalid or unsupported Server')
-		# else:
-			# server = parms.split()[0].lower()
-			# player = find_player(server,str(' '.join(parms.split()[1:])))
-			# if player:
-				# pid,pname,paid,points,rank,towns = player
-				# serverid = __URLS__[server][7:11]
-				
-				# response = urlopen('http://www.grepostats.com/world/%s/player/%s/history' % (serverid, pid))
-				# html = response.read()
-				# soup = BeautifulSoup(html)
-				# tabledata = soup.find("table")
-				# records = [] # store all of the records in this list
-				# for row in tabledata.findAll('tr'):
-					# col = row.findAll('td')
-					# prvy = col[0].string.strip()
-					# druhy = col[1].string.strip()
-					# record = '%s;%s' % (prvy, druhy) # store the record with a ';' between prvy and druhy
-					# records.append(record)
-				# for record in records: print(record)
-				
-				# html = urlopen('http://www.grepostats.com/world/%s/player/%s/history' % (serverid, pid))
-				# soup = BeautifulSoup(''.join(html))
-				# table = soup.find('table')
-				# rows = table.findAll('tr')
-				# out = ('    [Date]     (Points)    (Att Pts)    (Def Pts)\r\n')
-				# for tr in rows:
-					# text = []
-					# print (tr)
-					# cols = tr.findAll('td')
-					# line = []
-					# for td in cols:
-						
-						# line.append(str(td.find(text=True)))
-						
-						# text.append(str(''.join(td.find(text=True))))
-						# print ('%s+|' % (text))
-					
-					# if len(line) == 9  and line[0] != "Date": 
-							# out = ('%s [%s] (%s) (%s) (%s)\r\n' % (out, line[0],line[4],line[7],line[8]))
-					# for line in text:
-						# print (line)
-				#Message.Chat.SendMessage(out)
-			#else: Message.Chat.SendMessage("Unknown Player")
+
+	elif cmd in ('MONITORGHOST',):
+		activeservers = getactiveservers()
+		if len(parms.split()) < 2:
+			SendMessage('[*] Syntax: MONITORGHOST <server> <ocean>')
+		elif parms.split()[0].lower() not in __URLS__:
+			SendMessage('[*] Inavlid or unsupported server')
+		elif not parms.split()[1].isdigit() or int(parms.split()[1]) < 1 or int(parms.split()[1]) > 99:
+			SendMessage('[*] Invalid ocean')
+		else:
+			server = parms.split()[0].lower()
+			ocean = int(parms.split()[1])
+			if server not in activeservers:
+				getworlddata(server,__URLS__[server],"all")
+				townsize = changecheck(__URLS__[server],"towns")
+				if server not in settings["ghost_scrape"]: settings["ghost_scrape"][server] = []
+				settings["ghost_scrape"][server] = ((townsize, int(time())))
+			
+			if Message.Chat.Name in settings["monitorghost"]:
+				if server in settings["monitorghost"][Message.Chat.Name]:
+					if ocean in settings["monitorghost"][Message.Chat.Name][server]:
+						settings["monitorghost"][Message.Chat.Name][server].remove(ocean)
+						SendMessage('[*] Monitor Disabled for this channel.')
+					else:
+						settings["monitorghost"][Message.Chat.Name][server].append(ocean)
+						SendMessage('[*] Monitor Enabled for this channel. Repeat this command to disable.')
+				else:
+					settings["monitorghost"][Message.Chat.Name][server] = []
+					settings["monitorghost"][Message.Chat.Name][server].append(ocean)
+
+					SendMessage('[*] Monitor Enabled for this channel. Repeat this command to disable.')
+			else:
+				settings["monitorghost"][Message.Chat.Name] = {}
+				settings["monitorghost"][Message.Chat.Name][server] = []
+				settings["monitorghost"][Message.Chat.Name][server].append(ocean)
+
+				SendMessage('[*] Monitor Enabled for this channel. Repeat this command to disable.')
+
+			cfgsave(settings)
+
 	elif cmd in ('MONITOR',):
 		activeservers = getactiveservers()
 		found = []
 		if len(parms.split()) < 1:
-			Message.Chat.SendMessage('[*] Syntax: MONITOR <server> <alliance or player name>\r\n EXAMPLE: >monitor delta Disciples of Ares\r\nDescription: Adds an Alliance or Player to the DefBP and Conquest watch list for this chat room. Repeat same command to remove monitor.\r\nRelated Commands: monitorlist')
+			SendMessage('[*] Syntax: MONITOR <server> <alliance or player name>\r\n EXAMPLE: >monitor delta Disciples of Ares\r\nDescription: Adds an Alliance or Player to the DefBP and Conquest watch list for this chat room. Repeat same command to remove monitor.\r\nRelated Commands: monitorlist')
 		elif parms.split()[0].lower() not in __URLS__:
-			Message.Chat.SendMessage('[*] Invalid or unsupported server.')
+			SendMessage('[*] Invalid or unsupported server.')
 		else:
 			server = str(parms.split()[0].lower())
 			if server not in activeservers: 		# if server is not in list of monitored servers, download world files.
@@ -338,39 +357,39 @@ def message_status(Message, Status):
 			elif find_player(server,alliplayer):
 				found = find_player(server,alliplayer)[0]
 			else:
-				Message.Chat.SendMessage('[*] Alliance or Player Not Found.')	
+				SendMessage('[*] Alliance or Player Not Found.')	
 			if found: 
 				if Message.Chat.Name in settings['monitor']:
 					if server in settings['monitor'][Message.Chat.Name]:
 						if found in settings['monitor'][Message.Chat.Name][server]:
 							settings['monitor'][Message.Chat.Name][server].remove(found)
-							Message.Chat.SendMessage('[*] Monitor Disabled for this channel.')
+							SendMessage('[*] Monitor Disabled for this channel.')
 						else:
 							settings['monitor'][Message.Chat.Name][server].append(found)
-							Message.Chat.SendMessage('[*] Monitor Enabled for this channel. Repeat this command to disable.')		
+							SendMessage('[*] Monitor Enabled for this channel. Repeat this command to disable.')		
 					else:
 						settings['monitor'][Message.Chat.Name][server] = []
 						settings['monitor'][Message.Chat.Name][server].append(found)
 						
-						Message.Chat.SendMessage('[*] Monitor Enabled for this channel. Repeat this command to disable.')	
+						SendMessage('[*] Monitor Enabled for this channel. Repeat this command to disable.')	
 				else:
 					settings['monitor'][Message.Chat.Name] = {}
 					settings['monitor'][Message.Chat.Name][server] = []
 					settings['monitor'][Message.Chat.Name][server].append(found)
-					Message.Chat.SendMessage('[*] Monitor Enabled for this channel. Repeat this command to disable.')
+					SendMessage('[*] Monitor Enabled for this channel. Repeat this command to disable.')
 			
 			cfgsave(settings)
 	elif cmd in ('MONITORLIST',):
 		if len(parms.split()) == 1:
 			if parms.split()[0].lower() == "help" or parms.split()[0].lower() == '?':
-				Message.Chat.SendMessage('[*] Syntax: MONITORLIST \r\nLists Alliances or Players being monitored for this chat.\r\nUse MONITOR command to add/remove')
+				SendMessage('[*] Syntax: MONITORLIST \r\nLists Alliances or Players being monitored for this chat.\r\nUse MONITOR command to add/remove')
 		else:
 			if Message.Chat.Name not in settings['monitor']:
 				print("Not in Settings")
-				Message.Chat.SendMessage('No Alliances or Players currently monitored')
+				SendMessage('No Alliances or Players currently monitored')
 			elif len(settings['monitor'][Message.Chat.Name]) == 0:
 				print(" LEngth was zero")
-				Message.Chat.SendMessage('No Alliances or Players currently monitored')
+				SendMessage('No Alliances or Players currently monitored')
 			else:
 				out = []
 				for server in settings['monitor'][Message.Chat.Name]:
@@ -382,14 +401,14 @@ def message_status(Message, Status):
 						if id in serveralliances:  out = '%s		%s (%s)\r\n' %(out, serveralliances[id][0],server)
 						
 						if id in serverplayers:  out = '%s		%s (%s)\r\n' %(out, serverplayers[id][0],server)
-				Message.Chat.SendMessage(out)
+				SendMessage(out)
 				
 	elif cmd in ('PLAYER',):
 		bbcode = False
 		if len(parms.split()) < 2:
-				Message.Chat.SendMessage('[*] Syntax: PLAYER <server> {bbcode} <player name/id>    **bbcode is optional\r\n Example: >player delta bbcode fortyfour \r\n Description: Returns players points, number of towns and rank')
+				SendMessage('[*] Syntax: PLAYER <server> {bbcode} <player name/id>    **bbcode is optional\r\n Example: >player delta bbcode fortyfour \r\n Description: Returns players points, number of towns and rank')
 		elif parms.split()[0].lower() not in __URLS__:
-			Message.Chat.SendMessage('[*] Invalid or unsupported server')
+			SendMessage('[*] Invalid or unsupported server')
 		elif parms.split()[1] == 'bbcode': bbcode = True
 		
 		server = parms.split()[0].lower()
@@ -399,20 +418,20 @@ def message_status(Message, Status):
 			pid,pname,paid,points,rank,towns = player
 			if player[2]:
 				paname = alliance_name(server,paid)
-				if bbcode == True: Message.Chat.SendMessage('[*] [player]%s[/player] ([ally]%s[/ally]): %s points, %s town(s), rank %s' % (pname,paname,points,towns,rank))
-				else:Message.Chat.SendMessage('[*] %s (%s): %s points, %s town(s), rank %s' % (pname,paname,points,towns,rank))
+				if bbcode == True: SendMessage('[*] [player]%s[/player] ([ally]%s[/ally]): %s points, %s town(s), rank %s' % (pname,paname,points,towns,rank))
+				else:SendMessage('[*] %s (%s): %s points, %s town(s), rank %s' % (pname,paname,points,towns,rank))
 			else:
-				if bbcode == True: Message.Chat.SendMessage('[*] [player]%s[/player]: %s points, %s town(s), rank %s' % (pname,points,towns,rank))
-				else:Message.Chat.SendMessage('[*] %s: %s points, %s town(s), rank %s' % (pname,points,towns,rank))
+				if bbcode == True: SendMessage('[*] [player]%s[/player]: %s points, %s town(s), rank %s' % (pname,points,towns,rank))
+				else:SendMessage('[*] %s: %s points, %s town(s), rank %s' % (pname,points,towns,rank))
 		else:
-			Message.Chat.SendMessage('[*] No match found for that player.')
+			SendMessage('[*] No match found for that player.')
 	
 	elif cmd in ('CONQUESTS',):
 		__CONLIMIT__ = 60*60*24*2								#Set the max age of conquest we will return
 		if len(parms.split()) < 2:
-			Message.Chat.SendMessage('[*] Syntax: CONQUESTS <server> <alliance name>\r\n EXAMPLE: >conquests delta Disciples of ares\r\n Description: Returns last 48 hours of conquests for given alliance')
+			SendMessage('[*] Syntax: CONQUESTS <server> <alliance name>\r\n EXAMPLE: >conquests delta Disciples of ares\r\n Description: Returns last 48 hours of conquests for given alliance')
 		elif parms.split()[0].lower() not in __URLS__:
-			Message.Chat.SendMessage('[*] Invalid or unsupported server')
+			SendMessage('[*] Invalid or unsupported server')
 		else:
 			server = parms.split()[0].lower()
 			alli_test = ' '.join(parms.split()[1:]).lower().strip()	
@@ -444,18 +463,18 @@ def message_status(Message, Status):
 						out='%s    %s (%s) was conquered by %s (%s)\r\n' % (out,town_name,serverplayers[loser][0],serverplayers[winner][0],winner_alli_name)
 						#out='%s    %s (%s) was conquered by %s (%s)\r\n' % (out,serverplayers[loser][0],alliance_name(server, loser_ally_id),serverplayers[winner][0],winner_alli_name)
 				out = '%s	[*] %s Conquests.' % (out, count)
-				sendmsg(out)
+				SendMessage(out)
 						
 			else:
-				Message.Chat.SendMessage('[*] Cannot initiate. Alliance id/name not found.')				
+				SendMessage('[*] Cannot initiate. Alliance id/name not found.')				
 
 		
 	elif cmd in ('TOWNS',):
 		bbcode = False
 		if len(parms.split()) < 2:
-			Message.Chat.SendMessage('[*] Syntax: TOWNS <server> {bbcode} <player name>   *bbcode is optional\r\n Example: >towns delta bbcode fortyfour\r\n Description: Returns town names, coordinates and points for a given player')
+			SendMessage('[*] Syntax: TOWNS <server> {bbcode} <player name>   *bbcode is optional\r\n Example: >towns delta bbcode fortyfour\r\n Description: Returns town names, coordinates and points for a given player')
 		elif parms.split()[0].lower() not in __URLS__:
-			Message.Chat.SendMessage('[*] Invalid or unsupported server.')
+			SendMessage('[*] Invalid or unsupported server.')
 		else:
 			if parms.split()[1] == 'bbcode': bbcode = True
 			server = parms.split()[0].lower()
@@ -489,46 +508,46 @@ def message_status(Message, Status):
 						towninfo = '%s (%sx%s) %s points' % (unquote_plus(town[1]),town[3],town[4],town[5])
 						out = '{0}    {1:0>#{2}}: {3}\r\n'.format(out,n+1,len(str(len(towns))),towninfo)
 				if bbcode == True: out = '%s [/table]' % (out)		
-				Message.Chat.SendMessage(out)
+				SendMessage(out)
 			else:
-				Message.Chat.SendMessage('[*] No match found for that player.')		
+				SendMessage('[*] No match found for that player.')		
 	
 	
 	elif cmd in ('TERRITORYLIMIT',):
 		if parms == '':
 			if Message.Chat.Name not in settings['territorylimit']: settings['territorylimit'][Message.Chat.Name] = 5
 			territorylimit = settings['territorylimit'][Message.Chat.Name]
-			Message.Chat.SendMessage('[*] Current Territory Limit: %s%s' % (str(territorylimit) if territorylimit > 0 else 'ALL','%'))
+			SendMessage('[*] Current Territory Limit: %s%s' % (str(territorylimit) if territorylimit > 0 else 'ALL','%'))
 		elif parms.isdigit() or parms.upper() == 'ALL':
 			limit = int(parms) if parms.isdigit() else 0
 			if limit > 100: limit = 100
 			settings['territorylimit'][Message.Chat.Name] = limit
-			Message.Chat.SendMessage('[*] Territory Limit Updated: %d%s' % (settings['territorylimit'][Message.Chat.Name],'%'))
+			SendMessage('[*] Territory Limit Updated: %d%s' % (settings['territorylimit'][Message.Chat.Name],'%'))
 			cfgsave(settings)
 		else:
-			Message.Chat.SendMessage('[*] Syntax: TERRITORYLIMIT <percent|ALL>')
+			SendMessage('[*] Syntax: TERRITORYLIMIT <percent|ALL>')
 	elif cmd in ('RANGELIMIT',):
 		
 		if parms == '':
 			if Message.Chat.Name not in settings['rangelimit']: settings['rangelimit'][Message.Chat.Name] = 30
 			rangelimit = settings['rangelimit'][Message.Chat.Name]
-			Message.Chat.SendMessage('[*] Current Range Limit: %s\r\n *Rangelimit used by TERRITORY command' % (str(rangelimit) if rangelimit > 0 else 'ALL',))
+			SendMessage('[*] Current Range Limit: %s\r\n *Rangelimit used by TERRITORY command' % (str(rangelimit) if rangelimit > 0 else 'ALL',))
 		elif parms.isdigit() or parms.upper() == 'ALL':
 			limit = int(parms) if parms.isdigit() else 0
 			if limit > 999: limit = 999
 			settings['rangelimit'][Message.Chat.Name] = limit
-			Message.Chat.SendMessage('[*] Range Limit Updated: %d\r\n *Rangelimit used by TERRITORY command' % (settings['rangelimit'][Message.Chat.Name]))
+			SendMessage('[*] Range Limit Updated: %d\r\n *Rangelimit used by TERRITORY command' % (settings['rangelimit'][Message.Chat.Name]))
 			cfgsave(settings)
 		else:
-			Message.Chat.SendMessage('[*] Syntax: RANGELIMIT <distance|ALL>')
+			SendMessage('[*] Syntax: RANGELIMIT <distance|ALL>')
 	
 	elif cmd in ('ISLANDS',):
 		bbcode = False
 		if len(parms.split()) < 2:
-			Message.Chat.SendMessage('[*] Syntax: ISLANDS <server> {bbcode} <player name>  *bbcode is optional\r\n EXAMPLE: >islands delta bbcode fortyfour\r\n Description: Groups players towns by islands')
-			Message.Chat.SendMessage('	')
+			SendMessage('[*] Syntax: ISLANDS <server> {bbcode} <player name>  *bbcode is optional\r\n EXAMPLE: >islands delta bbcode fortyfour\r\n Description: Groups players towns by islands')
+			SendMessage('	')
 		elif parms.split()[0].lower() not in __URLS__:
-			Message.Chat.SendMessage('[*] Invalid server : %s' % (parms.split()[0]))
+			SendMessage('[*] Invalid server : %s' % (parms.split()[0]))
 		elif parms.split()[1] == 'bbcode': bbcode = True
 		
 		server = parms.split()[0].lower()
@@ -553,18 +572,17 @@ def message_status(Message, Status):
 				for n,town in enumerate(towns):
 					towninfo = '%s (%sx%s) %s points' % (unquote_plus(town[1]),town[2],town[3],town[5])
 					out = '{0}    {1:0>#{2}}: {3}\r\n'.format(out,n+1,len(str(len(towns))),towninfo)
-			Message.Chat.SendMessage(out)
+			SendMessage(out)
 		else:
-			Message.Chat.SendMessage('[*] No match found for that player.')
-	
+			SendMessage('[*] No match found for that player.')
 	
 	elif cmd in ('EASYMONEY',):
 	
 		if len(parms.split()) < 2 or not parms.split()[1].isdigit() or not parms.split()[2].isdigit():
-			sendmsg('[*] Syntax: %s <server> <min town points> <max alliance points> [ocean]\r\n EXAMPLE: >easymoney delta 9000 500000 63\r\n Description: Returns towns of a certain point size from alliances of a certain point size for a certain ocean' % (cmd,))
+			SendMessage('[*] Syntax: %s <server> <min town points> <max alliance points> [ocean]\r\n EXAMPLE: >easymoney delta 9000 500000 63\r\n Description: Returns towns of a certain point size from alliances of a certain point size for a certain ocean' % (cmd,))
 		elif parms.split()[0].lower() not in __URLS__:
-			Message.Chat.SendMessage('[*] Invalid or unsupported server')
-		elif not parms.split()[3].lower().isdigit() or len(list(parms.split()[3].lower())) != 2: Message.Chat.SendMessage('[*] Invalid Ocean Number')
+			SendMessage('[*] Invalid or unsupported server')
+		elif not parms.split()[3].lower().isdigit() or len(list(parms.split()[3].lower())) != 2: SendMessage('[*] Invalid Ocean Number')
 		else:
 			server = parms.split()[0].lower()
 			ocean =  int(parms.split()[3])
@@ -598,14 +616,14 @@ def message_status(Message, Status):
 					town,points = town_tuple
 					towninfo = '%s @ %sx%s (owner: %s) (points: %s)' % (unquote_plus(town[1]),town[2],town[3],serverplayers[town[0]][0],town[5])
 					out = '{0}        {1:0>#{2}}: {3}\r\n'.format(out,n+1,len(str(len(sorted_towns))),towninfo)
-			sendmsg(out)
+			SendMessage(out)
 
 	elif cmd in ('NEARGHOST',):
 		
 		if len(parms.split()) < 3 or len(parms.split()[1].lower().split('x')) != 2 or not parms.split()[1].split('x')[0].isdigit() or not parms.split()[1].split('x')[1].isdigit() or not parms.split()[2].isdigit() :
-			Message.Chat.SendMessage('[*] Syntax: NEARGHOST <server> <coords> <min points>\r\n Example >nearghost delta 604x384 5000\r\n Description: Returns list of Ghost Towns of certain points near a coordinate')
+			SendMessage('[*] Syntax: NEARGHOST <server> <coords> <min points>\r\n Example >nearghost delta 604x384 5000\r\n Description: Returns list of Ghost Towns of certain points near a coordinate')
 		elif parms.split()[0].lower() not in __URLS__:
-			Message.Chat.SendMessage('[*] Invalid or unsupported server.')
+			SendMessage('[*] Invalid or unsupported server.')
 		else:
 			server = parms.split()[0].lower()
 			x1,y1 = int(parms.split()[1].lower().split('x')[0]),int(parms.split()[1].lower().split('x')[1])
@@ -622,14 +640,14 @@ def message_status(Message, Status):
 				town,distance = town_tuple
 				towninfo = '%s (%sx%s) (%s points) (%d away)' % (unquote_plus(town[1]),town[2],town[3],town[5],distance)
 				out = '{0}   {1:0>#{2}}: {3}\r\n'.format(out,n+1,len(str(len(sorted_d))),towninfo)
-			Message.Chat.SendMessage(out)	
+			SendMessage(out)	
 
 	elif cmd in ('LISTALLI',):
 		bbcode = False
 		if len(parms.split()) < 3:
-			sendmsg('[*] Syntax: LISTALLI <server> {bbcode} <ocean[,ocean[,...]]> <alliance id/name>\r\nEXAMPLE: >listalli delta 73 Disciples of Ares\r\nDescription: Returns the towns for an alliiance in specific oceans')
+			SendMessage('[*] Syntax: LISTALLI <server> {bbcode} <ocean[,ocean[,...]]> <alliance id/name>\r\nEXAMPLE: >listalli delta 73 Disciples of Ares\r\nDescription: Returns the towns for an alliiance in specific oceans')
 		elif parms.split()[0].lower() not in __URLS__:
-			sendmsg('[*] Invalid or unsupported server.')
+			SendMessage('[*] Invalid or unsupported server.')
 					
 		else:
 			server = parms.split()[0].lower()
@@ -664,15 +682,15 @@ def message_status(Message, Status):
 							else:
 								memberinfo = '%s (%s points) (%s town%s) (rank %s)' % (member[0],member[2],member[4],'' if member[4] == 1 else 's',member[3])
 								out = '{0}    {1:0>#{2}}: {3}\r\n'.format(out,n+1,len(str(len(ocean_members))),memberinfo)
-				sendmsg(out)
+				SendMessage(out)
 			else:
-				sendmsg('[*] Alliance name/id not found.')
+				SendMessage('[*] Alliance name/id not found.')
 				
 	elif cmd in ('NEARPLAYER',):
 		if len(parms.split()) < 3 or len(parms.split()[1].lower().split('x')) != 2 or not parms.split()[1].lower().split('x')[0].isdigit() or not parms.split()[1].lower().split('x')[1].isdigit():
-			Message.Chat.SendMessage('[*] Syntax: NEARPLAYER <server> <coords> <player>\r\n Example: NEARPLAYER delta 604x384 fortyfour\r\n Description: Returns the towns of a player nearest to coordinates')
+			SendMessage('[*] Syntax: NEARPLAYER <server> <coords> <player>\r\n Example: NEARPLAYER delta 604x384 fortyfour\r\n Description: Returns the towns of a player nearest to coordinates')
 		elif parms.split()[0].lower() not in __URLS__:
-			Message.Chat.SendMessage('[*] Invalid or unsupported server.')
+			SendMessage('[*] Invalid or unsupported server.')
 		else:
 			server = parms.split()[0].lower()
 			player = find_player(server,' '.join(parms.split()[2:]))
@@ -691,9 +709,9 @@ def message_status(Message, Status):
 					town,distance = town_tuple
 					towninfo = '%s (%sx%s => %s) (%d away)' % (unquote_plus(town[1]),town[2],town[3],parms.split()[1].lower(),distance)
 					out = '{0}    {1:0>#{2}}: {3}\r\n'.format(out,n+1,len(str(len(towns))),towninfo)
-				Message.Chat.SendMessage(out)
+				SendMessage(out)
 			else:
-				Message.Chat.SendMessage('[*] No match found for that player.')				
+				SendMessage('[*] No match found for that player.')				
 				
 				
 	elif cmd in ('NEARALLI',):
@@ -701,23 +719,23 @@ def message_status(Message, Status):
 		clear = True
 		
 		if len(parms.split()) < 3:
-			Message.Chat.SendMessage('[*] Syntax: NEARALLI <server> {bbcode} <coords> <point limit> <alliance>    **bbcode is optional\r\nExample: >nearalli delta bbcode 624x298 100000 The Forgotten Pheonix\r\n Description: Returns the towns of a certain size for alliances nearest a coordinate.')
+			SendMessage('[*] Syntax: NEARALLI <server> {bbcode} <coords> <point limit> <alliance>    **bbcode is optional\r\nExample: >nearalli delta bbcode 624x298 100000 The Forgotten Pheonix\r\n Description: Returns the towns of a certain size for alliances nearest a coordinate.')
 
 			clear = False
 		elif parms.split()[0].lower() not in __URLS__:
-			Message.Chat.SendMessage('[*] Invalid or unsupported server.')
+			SendMessage('[*] Invalid or unsupported server.')
 			clear = False
 		elif parms.split()[1] == 'bbcode':bbcode = True
 		
 		elif bbcode == True:
 			if len(parms.split()) < 4 or len(parms.split()[2].lower().split('x')) != 2 or not parms.split()[2].lower().split('x')[0].isdigit() or len(parms.split()[2].lower().split('x')[0]) != 3 or len(parms.split()[2].lower().split('x')[1]) != 3 or not parms.split()[2].lower().split('x')[1].isdigit() or not parms.split()[3]:
-				Message.Chat.SendMessage('1[*] Syntax: NEARALLI <server> {bbcode} <coords> <point limit> <alliance>    **bbcode is optional')
-				Message.Chat.SendMessage('	Example: >nearalli delta bbcode 624x298 100000 The Forgotten Pheonix')
+				SendMessage('1[*] Syntax: NEARALLI <server> {bbcode} <coords> <point limit> <alliance>    **bbcode is optional')
+				SendMessage('	Example: >nearalli delta bbcode 624x298 100000 The Forgotten Pheonix')
 				clear = False
 		elif bbcode == False:	
 			if len(parms.split()) < 3 or len(parms.split()[1].lower().split('x')) != 2 or not parms.split()[1].lower().split('x')[0].isdigit() or len(parms.split()[1].lower().split('x')[0]) != 3 or len(parms.split()[1].lower().split('x')[1]) != 3 or not parms.split()[1].lower().split('x')[1].isdigit() or not parms.split()[2].isdigit():
-				Message.Chat.SendMessage('1[*] Syntax: NEARALLI <server> {bbcode} <coords> <point limit> <alliance>    **bbcode is optional')
-				Message.Chat.SendMessage('	Example: >nearalli delta 624x298 100000 The Forgotten Pheonix')
+				SendMessage('1[*] Syntax: NEARALLI <server> {bbcode} <coords> <point limit> <alliance>    **bbcode is optional')
+				SendMessage('	Example: >nearalli delta 624x298 100000 The Forgotten Pheonix')
 				clear = False
 		
 		if clear == True:	
@@ -764,16 +782,16 @@ def message_status(Message, Status):
 						towninfo = '(%s) %s @ %sx%s (%s points) (%s away)' % (players[town[0]][0],unquote_plus(town[1]),town[2],town[3],town[5],distance)
 						out = '{0}    {1:0>#{2}}: {3}\r\n'.format(out,n+1,len(str(len(towndistance))),towninfo)
 								
-				Message.Chat.SendMessage(out)	
+				SendMessage(out)	
 			else:
-				Message.Chat.SendMessage('[*] Cannot initiate. Alliance name not found.')		
+				SendMessage('[*] Cannot initiate. Alliance name not found.')		
 	
 	elif cmd in ('TERRITORY',):
 
 		if len(parms.split()) < 2:
-			Message.Chat.SendMessage('[*] Syntax: TERRITORY <server> <alliance id/name>\r\n EXAMPLE: >territory delta Disciples of Ares\r\n Description: Returns a breakdown of oceans an alliance resides in')
+			SendMessage('[*] Syntax: TERRITORY <server> <alliance id/name>\r\n EXAMPLE: >territory delta Disciples of Ares\r\n Description: Returns a breakdown of oceans an alliance resides in')
 		elif parms.split()[0].lower() not in __URLS__:
-			Message.Chat.SendMessage('[*] Invalid or unsupported server.')
+			SendMessage('[*] Invalid or unsupported server.')
 		else:
 			server = parms.split()[0].lower()
 			alli_test = ' '.join(parms.split()[1:]).lower().strip()
@@ -811,21 +829,21 @@ def message_status(Message, Status):
 					percent = round((float(points)/float(total))*100.0,2)
 					#if int(percent) < limit: continue
 					out = '%s    Ocean %s: %d points (%s%s) %d town%s\r\n' % (out,ocean,points,str(percent),'%',oceans[ocean]['towns'],'' if oceans[ocean]['towns'] == 1 else 's')
-				Message.Chat.SendMessage(out)
+				SendMessage(out)
 			else:
-				Message.Chat.SendMessage('[*] Cannot initiate. Alliance id/name not found.')	
+				SendMessage('[*] Cannot initiate. Alliance id/name not found.')	
 		
 				
 	elif cmd in ('TOPRANK',):
 		bbcode = False
 		if len(parms.split()) < 3:
-			Message.Chat.SendMessage('[*] Syntax: toprank <server> {bbcode} <limit> <Alliance id>  *bbcode is optional\r\n EXAMPLE: >toprank delta 20 disciples of ares\r\n Description: Returns the X amount top Defenders, Attackers and Fighters for a specific alliance ')
+			SendMessage('[*] Syntax: toprank <server> {bbcode} <limit> <Alliance id>  *bbcode is optional\r\n EXAMPLE: >toprank delta 20 disciples of ares\r\n Description: Returns the X amount top Defenders, Attackers and Fighters for a specific alliance ')
 		elif parms.split()[0].lower() not in __URLS__:
-			Message.Chat.SendMessage('[*] Invalid or unsupported server')
+			SendMessage('[*] Invalid or unsupported server')
 		elif parms.split()[1].lower() == 'bbcode' and not parms.split()[2].lower().isdigit():
-			Message.Chat.SendMessage('[*] No Limit Specified. Need a max player limit to return')
+			SendMessage('[*] No Limit Specified. Need a max player limit to return')
 		elif parms.split()[1].lower() != 'bbcode' and not parms.split()[1].isdigit():
-			Message.Chat.SendMessage('[*] No Limit Specified. Need a max player limit to return')
+			SendMessage('[*] No Limit Specified. Need a max player limit to return')
 		else:
 			server = parms.split()[0].lower()
 			if parms.split()[1] == 'bbcode': bbcode = True
@@ -887,8 +905,8 @@ def message_status(Message, Status):
 					if bbcode == True:rankinfo = ') [player]%s[/player] - [i]%s[/i]' % (players[player[0]][0],player[1])
 					else: rankinfo = ') %s - %s' % (players[player[0]][0],player[1])
 					out = '{0}\t\t\t\t{1}{2}\r\n'.format(out,n+1,rankinfo)
-				Message.Chat.SendMessage(out)
-			else: Message.Chat.SendMessage(" Unable to find alliance %s" % (alli_test))
+				SendMessage(out)
+			else: SendMessage(" Unable to find alliance %s" % (alli_test))
 	
 	elif cmd in ('BOTSTATS',):
 		alliplays = []
@@ -899,13 +917,13 @@ def message_status(Message, Status):
 			for server in settings['monitor'][chat]:
 				for item in settings['monitor'][chat][server]:
 					if len(item) > 0 and item not in alliplays: alliplays.append(item)
-		Message.Chat.SendMessage('I have %s contacts and am in %s active chat rooms monitoring %s alliances and players on %s Grepolis servers.' % (contacts, chats, len(alliplays), servers))
+		SendMessage('I have %s contacts and am in %s active chat rooms monitoring %s alliances and players on %s Grepolis servers.' % (contacts, chats, len(alliplays), servers))
 
 
 	
 	else:
-		Message.Chat.SendMessage('Unrecognized command: %s' % (cmd))
-	
+		SendMessage('Unrecognized command: %s' % (cmd))
+
 def main():
 	global settings
 	activeservers = []
@@ -920,6 +938,7 @@ def main():
 	attcheck = False
 	defcheck = False
 	concheck = False
+	towncheck = False
 	delchat = []
 	
 	
@@ -939,6 +958,68 @@ def main():
 				defsize = changecheck(__URLS__[server],'player_kills_def')									#get the current size of the file on the grepolis server.
 				consize = changecheck(__URLS__[server],'conquers')									#get the current size of the file on the grepolis server.
 				
+				if not server in settings["ghost_scrape"]: settings["ghost_scrape"][server] = [0,int(time())]
+				if server in settings["ghost_scrape"]:
+					townsize = changecheck(__URLS__[server],'towns')
+					if townsize != settings["ghost_scrape"][server][0]:
+						towncheck = True
+					if towncheck:
+						checklist = {}
+						currtowns = loadfile(server,"towns")
+						getworlddata(server,__URLS__[server],"towns")
+						newtowns = loadfile(server,"towns")
+						for chat in settings["monitorghost"]:
+							try:
+								if skype.Chat(chat).MyStatus != "SUBSCRIBED":
+									if chat not in delchat:
+										print("Adding Chat %s to delete list because of Status: %s" % (skype.Chat(chat).FriendlyName, skype.Chat(chat).MyStatus))
+										delchat.append(chat)
+									continue
+							except Exception:
+								pass
+							if chat not in checklist:
+								checklist[chat] = []
+							if server not in settings["monitorghost"][chat]: continue
+							for item in settings["monitorghost"][chat][server]:
+								checklist[chat].append(item)
+
+						for chat in checklist:
+							toutlist = {}
+							toutlist[chat] = {}
+							toutlist[chat]["towns"] = {}
+
+							for ocean in checklist[chat]:
+								if not ocean in toutlist[chat]["towns"]: toutlist[chat]["towns"][ocean] = []
+								playertowns = player_towns_by_ocean(currtowns,ocean)
+								ghosttowns = ghosts_by_ocean(newtowns,ocean)
+								for id in ghosttowns:
+									ghost = ghosttowns[id]
+									if id in playertowns:
+										playertown = playertowns[id]
+										player = serverplayers[playertown[0]]
+										ghostocean = int('%s%s' % (str(ghost[2][0]),str(ghost[3][0])))
+										toutlist[chat]["towns"][ghostocean].append('%s (%s) -> %s (%s) %s pts' % (unquote_plus(ghost[1]),player[0],unquote_plus(ghost[1]),'Ghost',ghost[5]))
+
+							if toutlist[chat]["towns"]:
+								tout = []
+								for chat in toutlist:
+									for ocean in toutlist[chat]["towns"]:
+										if len(toutlist[chat]["towns"][ocean]) == 0: continue
+										if len(tout) == 0: 
+											tout = unicode('(tumbleweed) Ghost Alerts!\r\n')
+										tout = '%s    Ocean %s\r\n' % (tout,ocean,)
+
+										for alert in toutlist[chat]["towns"][ocean]:
+											tout = '%s        %s\r\n' % (tout,alert,)
+								if len(tout) > 0:
+									try:
+										newchat = skype.Chat(chat)
+										newchat.SendMessage(tout)
+									except Exception:
+										print('unable to send message to %s' % (skype.Chat))
+					towncheck = False
+					settings["ghost_scrape"][server] = ((townsize,int(time())))
+
 				if not server in settings["last_scrape"]: settings["last_scrape"][server] = [0,0,int(time())]
 				if attsize != settings["last_scrape"][server][0]:
 					attcheck = True
