@@ -244,6 +244,15 @@ def ghosts_by_ocean(towns,ocean):
 			rettowns[id] = town
 	return rettowns
 
+def promote(chat, member_name): # not currently working
+	print chat.MemberObjects
+	for member in chat.Members:
+		print member
+		if member.Handle == member_name:
+			print member.Role
+			member.Role = Skype4Py.chatMemberRoleMaster
+	return
+
 def message_status(Message, Status):
 	if Status not in ('SENT','RECEIVED') or len(Message.Body) < 2: return
 	if Message.Body[0] not in ('>','!'): return
@@ -252,24 +261,65 @@ def message_status(Message, Status):
 	#logging.info('Command: %s => %s (parms: %s)' % (Message.FromHandle,cmd,parms))
 	print ('Command: %s => %s (parms: %s)' % (Message.FromHandle,cmd,parms))
 	SendMessage = Message.Chat.SendMessage
-	
 
 	if cmd in ('HELP','COMMANDS', '?'):
 		SendMessage('[*] Available commands: BOTSTATUS, CONQUESTS, EASYMONEY, FEEDBACK, HELP, LISTALLI, MONITOR, MONITORLIST, NEARGHOST, NEARPLAYER, NEARALLI, PLAYER, RANGELIMIT, TOWNS, TERRITORY, TOPRANK')
 
+	elif cmd in ('CREATECHAT', ):
+		try:
+			botname = 'test.grepo'
+			if skype.CurrentUser.Handle == 'test.grepo': botname = 'us.grepo'
+
+			chat = skype.CreateChatWith(Message.FromHandle, botname)
+			chat.SendMessage('.')
+			sleep(1)
+
+			chat.SendMessage('/setrole %s %s' % (Message.FromHandle, "MASTER"))
+			chat.Kick(botname)
+		except:
+			pass
 	
-	# elif cmd in ('BOT',):
-	# 	if len(parms.split()) < 1:
-	# 		SendMessage('Converse with the bot at your own risk.  Example: >bot Hello there!')
-	# 	else:
-	# 		#print ('%s' % (parms))
-	# 		#s = bot1session.think(parms)
-	# 		s = bot1session.Ask(parms)
-	# 		SendMessage(s)
+	elif cmd in ('KICK', ):
+		if Message.FromHandle not in settings["botadmins"]: return
+		if not len(parms):
+			SendMessage('[*] Syntax: KICK <user name>')
+		else:
+			Message.Chat.Kick(parms.split()[0])
+
+	elif cmd in ('ADD', ):
+		if Message.FromHandle not in settings["botadmins"]: return
+		if not len(parms):
+			SendMessage('[*] Syntax: ADD <user name>')
+		else:
+			member = skype.User(parms.split()[0])
+			Message.Chat.AddMembers(member)
+
+	elif cmd in ('PROMOTE', 'DEMOTE', ):
+		if Message.FromHandle not in settings["botadmins"]: return
+
+		role = 'MASTER'
+		if cmd == 'DEMOTE': role = 'USER'
+
+		try:
+			if not len(parms):
+				SendMessage('/setrole %s %s' % (Message.FromHandle, role))
+				# promote(Message.Chat, Message.FromHandle)
+			elif len(parms.split()[0]):
+				SendMessage('/setrole %s %s' % (parms.split()[0], role))
+				# promote(Message.Chat, parms)
+		except:
+			pass
+
+	elif cmd in ('DELCHAT', ):
+		for member in Message.Chat.Members:
+			if member.Handle == skype.CurrentUserHandle: continue
+			Message.Chat.Kick(member.Handle)
+		Message.Chat.Leave()
+		# Message.Chat.Disband() # does not work 403 error
 	
 	elif cmd in ( 'DEFPOCH', 'DEFPOCHS',  ): SendMessage('DEFPOCH command deprecated.  Use the MONITOR command instead')
 	
-	elif cmd in ( 'BOTSTATUS',  ): SendMessage('10/19/2014: Testing MONITORGHOST. ') 
+	elif cmd in ( 'BOTSTATUS',  ): SendMessage('10/19/2014: Added !monitorghost command. ') 
 
 	elif cmd in ( 'BROADCAST',):  #### Need to fix this when no params are given it crashes. Add help as well.  Also need to fix chat room removal first.  Bot should cleanup chat rooms that do not have any monitors from its list.
 		if Message.FromHandle not in settings["botadmins"]: SendMessage('Broadcast permission denied')
