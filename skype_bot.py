@@ -2,7 +2,6 @@ import json, os, logging, gzip, Skype4Py, operator, math, socket
 from urllib import urlretrieve,unquote_plus
 from urllib2 import Request,urlopen
 from time import time, ctime, sleep
-from BeautifulSoup import BeautifulSoup
 currdir = os.getcwd()
 cfgfile = 'bot.cfg' #the file where we store defpochs/conqeusts and other info
 datadir = 'data_files' # directory where we store world data files.
