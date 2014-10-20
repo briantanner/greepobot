@@ -452,6 +452,13 @@ def message_status(Message, Status):
 						
 						if id in serverplayers:  out = '%s		%s (%s)\r\n' %(out, serverplayers[id][0],server)
 				SendMessage(out)
+			if Message.Chat.Name in settings['monitorghost'] and len(settings['monitorghost'][Message.Chat.Name]) > 0:
+			  out = []
+			  for server in settings['monitorghost'][Message.Chat.Name]:
+			    for ocean in settings['monitorghost'][Message.Chat.Name][server]:
+			      if len(out) == 0: out = 'Oceans Monitored in this Chat\r\n'
+			      out = '%s    Ocean %s (%s)\r\n' % (out, ocean, server)
+			  SendMessage(out)
 				
 	elif cmd in ('PLAYER',):
 		bbcode = False
@@ -1057,7 +1064,7 @@ def main():
 										if len(toutlist[chat]["towns"][ocean]) == 0: continue
 										if len(tout) == 0: 
 											tout = unicode('(tumbleweed) Ghost Alerts!\r\n')
-										tout = '%s    Ocean %s\r\n' % (tout,ocean,)
+										tout = '%s    Ocean %s (%s)\r\n' % (tout,ocean,server)
 
 										for alert in toutlist[chat]["towns"][ocean]:
 											tout = '%s        %s\r\n' % (tout,alert,)
