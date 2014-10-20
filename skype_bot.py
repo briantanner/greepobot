@@ -982,11 +982,15 @@ def message_status(Message, Status):
 		chats = len(settings['monitor'])
 		chats = chats + len(settings['monitorghost'])
 		servers = len(getactiveservers())
+		oceans = 0
 		for chat in settings['monitor']:
 			for server in settings['monitor'][chat]:
 				for item in settings['monitor'][chat][server]:
 					if len(item) > 0 and item not in alliplays: alliplays.append(item)
-		SendMessage('I have %s contacts and am in %s active chat rooms monitoring %s alliances and players on %s Grepolis servers.' % (contacts, chats, len(alliplays), servers))
+		for chat in settings['monitorghost']:
+			for server in settings['monitorghost'][chat]:
+				oceans += len(server)
+		SendMessage('I have %s contacts and am in %s active chat rooms monitoring %s alliances and players, and %s oceans on %s Grepolis servers.' % (contacts, chats, len(alliplays), oceans, servers))
 
 
 	
