@@ -316,9 +316,11 @@ def message_status(Message, Status):
 		# Message.Chat.Disband() # does not work 403 error
 	
 	elif cmd in ( 'BOTSTATUS',  ):
-		bot_status = settings['botstatus']
-		if not len(bot_status):
+		if not 'botstatus' in settings or not len(settings['botstatus']):
 			bot_status = 'There are no updates at this time.'
+		else:
+			bot_status = settings['botstatus']
+		
 		SendMessage(bot_status) 
 
 	elif cmd in ( 'SETSTATUS', ):
@@ -326,8 +328,10 @@ def message_status(Message, Status):
 		if len(parms.split()) < 2:
 			SendMessage('[*] Syntax: SETSTATUS <status>')
 
-		today = datetime.date.todat().strftime('%m/%d/%Y')
-		settings['botstatus'] = '%s: %s\r\n' % (today, parms.split()[0])
+			today = datetime.date.today().strftime('%m/%d/%Y')
+			settings['botstatus'] = '%s: %s\r\n' % (today, parms)
+			cfgsave(settings)
+			SendMessage('Updated bot status.')
 
 	elif cmd in ( 'BROADCAST',):  #### Need to fix this when no params are given it crashes. Add help as well.  Also need to fix chat room removal first.  Bot should cleanup chat rooms that do not have any monitors from its list.
 		if Message.FromHandle not in settings["botadmins"]: SendMessage('Broadcast permission denied')
