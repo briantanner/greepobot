@@ -1,13 +1,14 @@
-import json, os, logging, gzip, Skype4Py, operator, math, socket
+import json, os, logging, gzip, Skype4Py, operator, math, socket, datetime
 from urllib import urlretrieve,unquote_plus
 from urllib2 import Request,urlopen
 from time import time, ctime, sleep
 currdir = os.getcwd()
 cfgfile = 'bot.cfg' #the file where we store defpochs/conqeusts and other info
 datadir = 'data_files' # directory where we store world data files.
-#logging.basicConfig(filename='skype_bot.log',level=logging.DEBUG, format='%(asctime)s %(message)s')
+logging.basicConfig(filename='skype_bot.log',level=logging.DEBUG, format='%(asctime)s %(message)s')
 skype = Skype4Py.skype.Skype()
 timeout = 30
+settings = {}
 socket.setdefaulttimeout(timeout)
 
 __URLS__ = {
@@ -121,7 +122,7 @@ def loadfile(server,datatype):  ### open gzip world file and read into memory
 
 def getactiveservers():
 	activeservers = []
-	for chat in settings['monitor']: 						
+	for chat in settings['monitor']:
 				for server in settings['monitor'][chat]:
 					if server not in activeservers: activeservers.append(str(server))
 	for chat in settings["monitorghost"]:
@@ -302,10 +303,8 @@ def message_status(Message, Status):
 		try:
 			if not len(parms):
 				SendMessage('/setrole %s %s' % (Message.FromHandle, role))
-				# promote(Message.Chat, Message.FromHandle)
 			elif len(parms.split()[0]):
 				SendMessage('/setrole %s %s' % (parms.split()[0], role))
-				# promote(Message.Chat, parms)
 		except:
 			pass
 
@@ -316,9 +315,19 @@ def message_status(Message, Status):
 		Message.Chat.Leave()
 		# Message.Chat.Disband() # does not work 403 error
 	
-	elif cmd in ( 'DEFPOCH', 'DEFPOCHS',  ): SendMessage('DEFPOCH command deprecated.  Use the MONITOR command instead')
-	
-	elif cmd in ( 'BOTSTATUS',  ): SendMessage('10/19/2014: Added !monitorghost command. ') 
+	elif cmd in ( 'BOTSTATUS',  ):
+		bot_status = settings['botstatus']
+		if not len(bot_status):
+			bot_status = 'There are no updates at this time.'
+		SendMessage(bot_status) 
+
+	elif cmd in ( 'SETSTATUS', ):
+		if Message.FromHandle not in settings["botadmins"]: return
+		if len(parms.split()) < 2:
+			SendMessage('[*] Syntax: SETSTATUS <status>')
+
+		today = datetime.date.todat().strftime('%m/%d/%Y')
+		settings['botstatus'] = '%s: %s\r\n' % (today, parms.split()[0])
 
 	elif cmd in ( 'BROADCAST',):  #### Need to fix this when no params are given it crashes. Add help as well.  Also need to fix chat room removal first.  Bot should cleanup chat rooms that do not have any monitors from its list.
 		if Message.FromHandle not in settings["botadmins"]: SendMessage('Broadcast permission denied')
@@ -517,7 +526,6 @@ def message_status(Message, Status):
 						count += 1
 						winner_alli_name = alliance_name(server,winner_ally_id) if winner_ally_id else 'NO ALLIANCE'
 						out='%s    %s (%s) was conquered by %s (%s)\r\n' % (out,town_name,serverplayers[loser][0],serverplayers[winner][0],winner_alli_name)
-						#out='%s    %s (%s) was conquered by %s (%s)\r\n' % (out,serverplayers[loser][0],alliance_name(server, loser_ally_id),serverplayers[winner][0],winner_alli_name)
 				out = '%s	[*] %s Conquests.' % (out, count)
 				SendMessage(out)
 						
@@ -809,7 +817,7 @@ def message_status(Message, Status):
 				alli_id,alli_name = found[0],found[1]
 				towns = loadfile(server, "towns")
 				players = loadfile(server, "players")
-				alliances = loadfile(server, "alliances")
+				# alliances = loadfile(server, "alliances")
 				members = alliance_members(server, alli_id)
 				allitowns = []
 				for town in towns:
@@ -861,7 +869,7 @@ def message_status(Message, Status):
 				members = alliance_members(server,alli_id)
 				oceans = {}
 				towns = loadfile(server, "towns")
-				town_db = {}
+				# town_db = {}
 				for town in towns:
 					if towns[town][0] not in members: continue
 					x,y,points = towns[town][2],towns[town][3],towns[town][5]
@@ -1173,10 +1181,7 @@ def main():
 											if member == conquest[2]:					# Does this Alliance member match the victor?
 												if not conquest[3]: player_name = "Ghost"				# Assign Ghost if player does not exist anymore
 												else:
-													#print(serverplayers[conquest[3]])
 													player_name = serverplayers[conquest[3]][0]			#otherwise get the players name
-												if not conquest[5]: alli_name = "No Alliance"				#assign No alliance if player is lone wolf
-												else: alli_name = alliance_name(server,conquest[5])			#Assign players alliance name  
 												town_name = unquote_plus(servertowns[conquest[0]][1])
 												coutlist[chat]["alliances"][alliance].append('%s(%s) conquered %s (%s)' % (serverplayers[conquest[2]][0],alliance_name(server,str(conquest[4])),town_name,player_name))
 											if member == conquest[3]:
@@ -1200,8 +1205,6 @@ def main():
 										if player == conquest[2]: 
 											if not conquest[3]: player_name = "Ghost"
 											else: player_name = serverplayers[conquest[3]][0]
-											if not conquest[5]: alli_name = "No Alliance"
-											else: alli_name = alliance_name(server, conquest[5])
 											town_name = unquote_plus(servertowns[conquest[0]][1])
 											coutlist[chat]["players"].append('%s(%s) conquered %s (%s)' % (serverplayers[conquest[2]][0],alliance_name(server,str(conquest[4])),town_name,player_name))
 										if player == conquest[3]: coutlist[chat]["players"].append('%s (%s) was conquered by %s (%s)' % (town_name,serverplayers[conquest[3]][0],serverplayers[conquest[2]][0],alliance_name(server,str(conquest[4]))))
