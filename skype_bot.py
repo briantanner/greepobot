@@ -980,6 +980,7 @@ def message_status(Message, Status):
 		alliplays = []
 		contacts = skype.Friends.Count
 		chats = len(settings['monitor'])
+		chats = chats + len(settings['monitorghost'])
 		servers = len(getactiveservers())
 		for chat in settings['monitor']:
 			for server in settings['monitor'][chat]:
