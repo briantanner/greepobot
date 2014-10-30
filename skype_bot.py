@@ -1045,6 +1045,7 @@ def main():
 					townsize = changecheck(__URLS__[server],'towns')
 					if townsize != settings["ghost_scrape"][server][0]:
 						towncheck = True
+					towncheck = True
 					if towncheck:
 						checklist = {}
 						currtowns = loadfile(server,"towns")
@@ -1078,9 +1079,12 @@ def main():
 									ghost = ghosttowns[id]
 									if id in playertowns:
 										playertown = playertowns[id]
-										player = serverplayers[playertown[0]]
+										if playertown[0] in serverplayers:
+											player = serverplayers[playertown[0]][0]
+										else: player = 'Unknown'
 										ghostocean = int('%s%s' % (str(ghost[2][0]),str(ghost[3][0])))
-										toutlist[chat]["towns"][ghostocean].append('%s (%s) -> %s (%s) %s pts' % (unquote_plus(ghost[1]),player[0],unquote_plus(ghost[1]),'Ghost',ghost[5]))
+										# toutlist[chat]["towns"][ghostocean].append('%s (%s) -> %s (%s) %s pts' % (unquote_plus(ghost[1]),player[0],unquote_plus(ghost[1]),'Ghost',ghost[5]))
+										toutlist[chat]["towns"][ghostocean].append('%s (%s) -> %s (%s) [town]%s[/town] %s pts' % (unquote_plus(ghost[1]),player,unquote_plus(ghost[1]),'Ghost',id,ghost[5]))
 
 							if toutlist[chat]["towns"]:
 								tout = []
@@ -1092,7 +1096,19 @@ def main():
 										tout = '%s    Ocean %s (%s)\r\n' % (tout,ocean,server)
 
 										for alert in toutlist[chat]["towns"][ocean]:
+											if len(tout) == 0: 
+												tout = unicode('(tumbleweed) Ghost Alerts!\r\n')
+												tout = '%s    Ocean %s (%s)\r\n' % (tout,ocean,server)
+
 											tout = '%s        %s\r\n' % (tout,alert,)
+
+											if len(tout) > 6000:
+												try:
+													newchat = skype.Chat(chat)
+													newchat.SendMessage(tout)
+													tout = []
+												except Exception:
+													print('unable to send message to %s' % (skype.Chat))
 								if len(tout) > 0:
 									try:
 										newchat = skype.Chat(chat)
