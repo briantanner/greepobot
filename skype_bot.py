@@ -147,11 +147,20 @@ def getworlddata(server, url, datatype):
 			cfgsave(settings)
 		else: urlretrieve('%s/data/%s.txt.gz' % (url,datatype),'%s/%s/%s-%s.txt.gz' % (currdir,datadir,server,datatype))
 			  
-	except ValueError:
-		print "Problem Downloading World File"
+	except ValueError, e:
+		print "[ValueError] Problem Downloading World File."
+		print e
+		pass
 	except socket.error, e:
-		print "Connection error: %s" % e
-	#except IOError:
+		print "[SocketError] Connection error: %s" % e
+		pass
+	except IOError, e:
+		print "[IOError] Problem Downloading World File."
+		print e
+		pass
+	except Exception, e:
+		print "[Exception] Problem Downloaidng World File."
+		print e
 		pass
 def changecheck(url,datatype):
 	try:
