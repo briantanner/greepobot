@@ -1250,14 +1250,14 @@ def main():
 							for chat in aoutlist:
 								for alliance in aoutlist[chat]["alliances"]:
 									if len(aoutlist[chat]["alliances"][alliance]) == 0:continue
-									if len(aout) == 0: aout = unicode('(*) ABP Alerts!\r\n')
+									if len(aout) == 0: aout = unicode('(punch) ABP Alerts!\r\n')
 									aout = '%s    %s (%s):\r\n' % (aout, alliance_name(server,str(alliance)),server)
 									
 									for alert in aoutlist[chat]["alliances"][alliance]:
 										aout = '%s        %s\r\n' % (aout,alert,)
 								for player in aoutlist[chat]["players"]:
 									if len(aoutlist[chat]["players"]) == 0:continue
-									if len(aout) == 0: aout = unicode('(*) ABP Alerts!\r\n')
+									if len(aout) == 0: aout = unicode('(ninja) ABP Alerts!\r\n')
 									#for alert in doutlist[chat]["players"]:
 									aout = '%s        %s\r\n' % (aout,player,)	
 										
@@ -1274,14 +1274,14 @@ def main():
 							for chat in doutlist:
 								for alliance in doutlist[chat]["alliances"]:
 									if len(doutlist[chat]["alliances"][alliance]) == 0:continue
-									if len(dout) == 0: dout = unicode('(*) DBP Alerts!\r\n')
+									if len(dout) == 0: dout = unicode('(punch) DBP Alerts!\r\n')
 									dout = '%s    %s (%s):\r\n' % (dout, alliance_name(server,str(alliance)),server)
 									
 									for alert in doutlist[chat]["alliances"][alliance]:
 										dout = '%s        %s\r\n' % (dout,alert,)
 								for player in doutlist[chat]["players"]:
 									if len(doutlist[chat]["players"]) == 0:continue
-									if len(dout) == 0: dout = unicode('(*) DBP Alerts!\r\n')
+									if len(dout) == 0: dout = unicode('(ninja) DBP Alerts!\r\n')
 									#for alert in doutlist[chat]["players"]:
 									dout = '%s        %s\r\n' % (dout,player,)	
 										
@@ -1298,7 +1298,7 @@ def main():
 								
 								for alliance in coutlist[chat]["alliances"]:
 									if len(coutlist[chat]["alliances"][alliance]) == 0: continue
-									if len(cout) == 0: cout = unicode('(*) Conquest Alerts!\r\n')
+									if len(cout) == 0: cout = unicode('(bandit) Conquest Alerts!\r\n')
 									if len(coutlist[chat]["alliances"][alliance]) == 1: cout = '%s    1 Conquest by %s\r\n' % (cout, alliance_name(server,str(alliance)))
 									else: cout = '%s    %s Conquests by %s (%s)\r\n' % (cout, len(coutlist[chat]["alliances"][alliance]),alliance_name(server,str(alliance)),server)
 
@@ -1307,7 +1307,7 @@ def main():
 								
 								for player in coutlist[chat]["players"]:
 									if len(coutlist[chat]["players"]) == 0: continue
-									if len(cout) == 0: cout = unicode(' (*) Conquest Alerts!\r\n')
+									if len(cout) == 0: cout = unicode(' (bandit) Conquest Alerts!\r\n')
 									for alert in coutlist[chat]["players"]:
 										cout = '%s        %s\r\n' % (cout,alert,)				
 										
