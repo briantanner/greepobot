@@ -1,4 +1,5 @@
 bot.cfg
+bot.cfg.bak
 skype_bot.log
 data_files/*
 test_files/*

@@ -334,10 +334,11 @@ def message_status(Message, Status):
 
 	elif cmd in ( 'SETSTATUS', ):
 		if Message.FromHandle not in settings["botadmins"]: return
-		if len(parms.split()) < 2:
+		if len(parms.split()) < 1:
 			SendMessage('[*] Syntax: SETSTATUS <status>')
-
+		else:
 			today = datetime.date.today().strftime('%m/%d/%Y')
+			print parms
 			settings['botstatus'] = '%s: %s\r\n' % (today, parms)
 			cfgsave(settings)
 			SendMessage('Updated bot status.')
