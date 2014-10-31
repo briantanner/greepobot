@@ -51,7 +51,7 @@ __URLS__ = {
 	'naxos':'http://us38.grepolis.com',
 	'olympia':'http://us39.grepolis.com'
 }
-defaultconfig = {"territorylimit": {}, "rangelimit": {}, "monitor": {}, "monitorghost": {}, "botadmins": ["dev.lance"], "last_scrape":{}, "world_scrape":{}, "ghost_scrape":{}, "feedback":{}}
+defaultconfig = {"territorylimit": {}, "rangelimit": {}, "monitor": {}, "monitorghost": {}, "botadmins": ["dev.lance"], "last_scrape":{}, "world_scrape":{}, "ghost_scrape":{}, "feedback":{}, "urls":__URLS__}
 
 def cfgcheck():   
 	
@@ -84,7 +84,7 @@ def cfgsave(settings):  ## save config file with current settings data
 
 def loadfile(server,datatype):  ### open gzip world file and read into memory
 	if not os.path.exists(currdir+"/"+datadir): os.makedirs(currdir+"/"+datadir)
-	if not os.path.exists(os.path.join((currdir+"/"+datadir),server+"-"+datatype+".txt.gz")): getworlddata(server, __URLS__[server], datatype)
+	if not os.path.exists(os.path.join((currdir+"/"+datadir),server+"-"+datatype+".txt.gz")): getworlddata(server, settings['urls'][server], datatype)
 	
 		
 	localfile = os.path.join((currdir+"/"+datadir),server+"-"+datatype+".txt.gz")
@@ -116,7 +116,7 @@ def loadfile(server,datatype):  ### open gzip world file and read into memory
 		
 		#logging.warn("Unable to open file %s " % (localfile))
 		print (("Unable to open file %s ") % (localfile))
-		getworlddata(server, __URLS__[server], datatype)
+		getworlddata(server, settings['urls'][server], datatype)
 	
 	return datafile
 
@@ -271,10 +271,10 @@ def message_status(Message, Status):
 	print ('Command: %s => %s (parms: %s)' % (Message.FromHandle,cmd,parms))
 	SendMessage = Message.Chat.SendMessage
 
-	if cmd in ('HELP','COMMANDS', '?'):
+	if cmd in ( 'HELP','COMMANDS', '?' ):
 		SendMessage('[*] Available commands: BOTSTATUS, CONQUESTS, EASYMONEY, FEEDBACK, HELP, LISTALLI, MONITOR, MONITORLIST, NEARGHOST, NEARPLAYER, NEARALLI, PLAYER, RANGELIMIT, TOWNS, TERRITORY, TOPRANK')
 
-	elif cmd in ('CREATECHAT', ):
+	elif cmd in ( 'CREATECHAT', ):
 		try:
 			botname = 'test.grepo'
 			if skype.CurrentUser.Handle == 'test.grepo': botname = 'us.grepo'
@@ -288,14 +288,14 @@ def message_status(Message, Status):
 		except:
 			pass
 	
-	elif cmd in ('KICK', ):
+	elif cmd in ( 'KICK', ):
 		if Message.FromHandle not in settings["botadmins"]: return
 		if not len(parms):
 			SendMessage('[*] Syntax: KICK <user name>')
 		else:
 			Message.Chat.Kick(parms.split()[0])
 
-	elif cmd in ('ADD', ):
+	elif cmd in ( 'ADD', ):
 		if Message.FromHandle not in settings["botadmins"]: return
 		if not len(parms):
 			SendMessage('[*] Syntax: ADD <user name>')
@@ -303,7 +303,7 @@ def message_status(Message, Status):
 			member = skype.User(parms.split()[0])
 			Message.Chat.AddMembers(member)
 
-	elif cmd in ('PROMOTE', 'DEMOTE', ):
+	elif cmd in ( 'PROMOTE', 'DEMOTE', ):
 		if Message.FromHandle not in settings["botadmins"]: return
 
 		role = 'MASTER'
@@ -317,13 +317,35 @@ def message_status(Message, Status):
 		except:
 			pass
 
-	elif cmd in ('DELCHAT', ):
+	elif cmd in ( 'DELCHAT', ):
 		for member in Message.Chat.Members:
 			if member.Handle == skype.CurrentUserHandle: continue
 			Message.Chat.Kick(member.Handle)
 		Message.Chat.Leave()
 		# Message.Chat.Disband() # does not work 403 error
 	
+	elif cmd in ( 'ADDWORLD', ):
+		if Message.FromHandle not in settings["botadmins"]: return
+		if len(parms.split()) < 2:
+			SendMessage('[*] Syntax: ADDWORLD <server> <name>')
+		else:
+			settings['urls'][parms.split()[1]] = ("http://%s.grepolis.com" % parms.split()[0])
+			cfgsave(settings)
+			SendMessage('World %s added with url %s' % (parms.split()[1], "http://%s.grepolis.com" % parms.split()[0]))
+
+	elif cmd in ( 'DELWORLD', ):
+		if Message.FromHandle not in settings["botadmins"]: return
+		if len(parms.split()) < 1:
+			SendMessage('[*] Syntax: DELWORLD <name>')
+		else:
+			if parms.split()[0] in settings['urls']:
+				settings['urls'].pop(parms.split()[0], None)
+				cfgsave(settings)
+				SendMessage('Deleted world %s.' % (parms.split()[0]))
+
+	elif cmd in ( 'LISTWORLDS', ):
+		SendMessage('Worlds: %s' % ', '.join(settings['urls'].keys()))
+
 	elif cmd in ( 'BOTSTATUS',  ):
 		if not 'botstatus' in settings or not len(settings['botstatus']):
 			bot_status = 'There are no updates at this time.'
@@ -369,7 +391,7 @@ def message_status(Message, Status):
 		activeservers = getactiveservers()
 		if len(parms.split()) < 2:
 			SendMessage('[*] Syntax: MONITORGHOST <server> <ocean>')
-		elif parms.split()[0].lower() not in __URLS__:
+		elif parms.split()[0].lower() not in settings['urls']:
 			SendMessage('[*] Inavlid or unsupported server')
 		elif not parms.split()[1].isdigit() or int(parms.split()[1]) < 1 or int(parms.split()[1]) > 99:
 			SendMessage('[*] Invalid ocean')
@@ -377,8 +399,8 @@ def message_status(Message, Status):
 			server = parms.split()[0].lower()
 			ocean = int(parms.split()[1])
 			if server not in activeservers:
-				getworlddata(server,__URLS__[server],"all")
-				townsize = changecheck(__URLS__[server],"towns")
+				getworlddata(server,settings['urls'][server],"all")
+				townsize = changecheck(settings['urls'][server],"towns")
 				if server not in settings["ghost_scrape"]: settings["ghost_scrape"][server] = []
 				settings["ghost_scrape"][server] = ((townsize, int(time())))
 			
@@ -409,15 +431,15 @@ def message_status(Message, Status):
 		found = []
 		if len(parms.split()) < 1:
 			SendMessage('[*] Syntax: MONITOR <server> <alliance or player name>\r\n EXAMPLE: >monitor delta Disciples of Ares\r\nDescription: Adds an Alliance or Player to the DefBP and Conquest watch list for this chat room. Repeat same command to remove monitor.\r\nRelated Commands: monitorlist')
-		elif parms.split()[0].lower() not in __URLS__:
+		elif parms.split()[0].lower() not in settings['urls']:
 			SendMessage('[*] Invalid or unsupported server.')
 		else:
 			server = str(parms.split()[0].lower())
 			if server not in activeservers: 		# if server is not in list of monitored servers, download world files.
-				getworlddata(server,__URLS__[server],"all")
-				attsize = changecheck(__URLS__[server],'player_kills_att')
-				defsize = changecheck(__URLS__[server],'player_kills_def')									
-				consize = changecheck(__URLS__[server],'conquers')
+				getworlddata(server,settings['urls'][server],"all")
+				attsize = changecheck(settings['urls'][server],'player_kills_att')
+				defsize = changecheck(settings['urls'][server],'player_kills_def')									
+				consize = changecheck(settings['urls'][server],'conquers')
 				if server not in settings["last_scrape"]: settings["last_scrape"][server] = []
 				settings["last_scrape"][server] = ((attsize, defsize, consize, int(time())))
 				if server not in settings["world_scrape"]: settings["world_scrape"][server] = []
@@ -486,7 +508,7 @@ def message_status(Message, Status):
 		bbcode = False
 		if len(parms.split()) < 2:
 				SendMessage('[*] Syntax: PLAYER <server> {bbcode} <player name/id>    **bbcode is optional\r\n Example: >player delta bbcode fortyfour \r\n Description: Returns players points, number of towns and rank')
-		elif parms.split()[0].lower() not in __URLS__:
+		elif parms.split()[0].lower() not in settings['urls']:
 			SendMessage('[*] Invalid or unsupported server')
 		elif parms.split()[1] == 'bbcode': bbcode = True
 		
@@ -509,7 +531,7 @@ def message_status(Message, Status):
 		__CONLIMIT__ = 60*60*24*2								#Set the max age of conquest we will return
 		if len(parms.split()) < 2:
 			SendMessage('[*] Syntax: CONQUESTS <server> <alliance name>\r\n EXAMPLE: >conquests delta Disciples of ares\r\n Description: Returns last 48 hours of conquests for given alliance')
-		elif parms.split()[0].lower() not in __URLS__:
+		elif parms.split()[0].lower() not in settings['urls']:
 			SendMessage('[*] Invalid or unsupported server')
 		else:
 			server = parms.split()[0].lower()
@@ -551,7 +573,7 @@ def message_status(Message, Status):
 		bbcode = False
 		if len(parms.split()) < 2:
 			SendMessage('[*] Syntax: TOWNS <server> {bbcode} <player name>   *bbcode is optional\r\n Example: >towns delta bbcode fortyfour\r\n Description: Returns town names, coordinates and points for a given player')
-		elif parms.split()[0].lower() not in __URLS__:
+		elif parms.split()[0].lower() not in settings['urls']:
 			SendMessage('[*] Invalid or unsupported server.')
 		else:
 			if parms.split()[1] == 'bbcode': bbcode = True
@@ -624,7 +646,7 @@ def message_status(Message, Status):
 		if len(parms.split()) < 2:
 			SendMessage('[*] Syntax: ISLANDS <server> {bbcode} <player name>  *bbcode is optional\r\n EXAMPLE: >islands delta bbcode fortyfour\r\n Description: Groups players towns by islands')
 			SendMessage('	')
-		elif parms.split()[0].lower() not in __URLS__:
+		elif parms.split()[0].lower() not in settings['urls']:
 			SendMessage('[*] Invalid server : %s' % (parms.split()[0]))
 		elif parms.split()[1] == 'bbcode': bbcode = True
 		
@@ -658,7 +680,7 @@ def message_status(Message, Status):
 	
 		if len(parms.split()) < 2 or not parms.split()[1].isdigit() or not parms.split()[2].isdigit():
 			SendMessage('[*] Syntax: %s <server> <min town points> <max alliance points> [ocean]\r\n EXAMPLE: >easymoney delta 9000 500000 63\r\n Description: Returns towns of a certain point size from alliances of a certain point size for a certain ocean' % (cmd,))
-		elif parms.split()[0].lower() not in __URLS__:
+		elif parms.split()[0].lower() not in settings['urls']:
 			SendMessage('[*] Invalid or unsupported server')
 		elif not parms.split()[3].lower().isdigit() or len(list(parms.split()[3].lower())) != 2: SendMessage('[*] Invalid Ocean Number')
 		else:
@@ -700,7 +722,7 @@ def message_status(Message, Status):
 		
 		if len(parms.split()) < 3 or len(parms.split()[1].lower().split('x')) != 2 or not parms.split()[1].split('x')[0].isdigit() or not parms.split()[1].split('x')[1].isdigit() or not parms.split()[2].isdigit() :
 			SendMessage('[*] Syntax: NEARGHOST <server> <coords> <min points>\r\n Example >nearghost delta 604x384 5000\r\n Description: Returns list of Ghost Towns of certain points near a coordinate')
-		elif parms.split()[0].lower() not in __URLS__:
+		elif parms.split()[0].lower() not in settings['urls']:
 			SendMessage('[*] Invalid or unsupported server.')
 		else:
 			server = parms.split()[0].lower()
@@ -724,7 +746,7 @@ def message_status(Message, Status):
 		bbcode = False
 		if len(parms.split()) < 3:
 			SendMessage('[*] Syntax: LISTALLI <server> {bbcode} <ocean[,ocean[,...]]> <alliance id/name>\r\nEXAMPLE: >listalli delta 73 Disciples of Ares\r\nDescription: Returns the towns for an alliiance in specific oceans')
-		elif parms.split()[0].lower() not in __URLS__:
+		elif parms.split()[0].lower() not in settings['urls']:
 			SendMessage('[*] Invalid or unsupported server.')
 					
 		else:
@@ -767,7 +789,7 @@ def message_status(Message, Status):
 	elif cmd in ('NEARPLAYER',):
 		if len(parms.split()) < 3 or len(parms.split()[1].lower().split('x')) != 2 or not parms.split()[1].lower().split('x')[0].isdigit() or not parms.split()[1].lower().split('x')[1].isdigit():
 			SendMessage('[*] Syntax: NEARPLAYER <server> <coords> <player>\r\n Example: NEARPLAYER delta 604x384 fortyfour\r\n Description: Returns the towns of a player nearest to coordinates')
-		elif parms.split()[0].lower() not in __URLS__:
+		elif parms.split()[0].lower() not in settings['urls']:
 			SendMessage('[*] Invalid or unsupported server.')
 		else:
 			server = parms.split()[0].lower()
@@ -800,7 +822,7 @@ def message_status(Message, Status):
 			SendMessage('[*] Syntax: NEARALLI <server> {bbcode} <coords> <point limit> <alliance>    **bbcode is optional\r\nExample: >nearalli delta bbcode 624x298 100000 The Forgotten Pheonix\r\n Description: Returns the towns of a certain size for alliances nearest a coordinate.')
 
 			clear = False
-		elif parms.split()[0].lower() not in __URLS__:
+		elif parms.split()[0].lower() not in settings['urls']:
 			SendMessage('[*] Invalid or unsupported server.')
 			clear = False
 		elif parms.split()[1] == 'bbcode':bbcode = True
@@ -868,7 +890,7 @@ def message_status(Message, Status):
 
 		if len(parms.split()) < 2:
 			SendMessage('[*] Syntax: TERRITORY <server> <alliance id/name>\r\n EXAMPLE: >territory delta Disciples of Ares\r\n Description: Returns a breakdown of oceans an alliance resides in')
-		elif parms.split()[0].lower() not in __URLS__:
+		elif parms.split()[0].lower() not in settings['urls']:
 			SendMessage('[*] Invalid or unsupported server.')
 		else:
 			server = parms.split()[0].lower()
@@ -916,7 +938,7 @@ def message_status(Message, Status):
 		bbcode = False
 		if len(parms.split()) < 3:
 			SendMessage('[*] Syntax: toprank <server> {bbcode} <limit> <Alliance id>  *bbcode is optional\r\n EXAMPLE: >toprank delta 20 disciples of ares\r\n Description: Returns the X amount top Defenders, Attackers and Fighters for a specific alliance ')
-		elif parms.split()[0].lower() not in __URLS__:
+		elif parms.split()[0].lower() not in settings['urls']:
 			SendMessage('[*] Invalid or unsupported server')
 		elif parms.split()[1].lower() == 'bbcode' and not parms.split()[2].lower().isdigit():
 			SendMessage('[*] No Limit Specified. Need a max player limit to return')
@@ -1024,6 +1046,9 @@ def main():
 	towncheck = False
 	delchat = []
 	
+	if 'urls' not in settings:
+		settings['urls'] = __URLS__
+		cfgsave(settings)
 	
 	while True:
 		if nextscrape <= int(time()): 		##Is it time to check for updated world defbp and conq files?
@@ -1037,20 +1062,20 @@ def main():
 				servertowns = loadfile(server,"towns")
 				serverplayers = loadfile(server,"players")
 				serveralliances = loadfile(server,"alliances")
-				attsize = changecheck(__URLS__[server],'player_kills_att')
-				defsize = changecheck(__URLS__[server],'player_kills_def')									#get the current size of the file on the grepolis server.
-				consize = changecheck(__URLS__[server],'conquers')									#get the current size of the file on the grepolis server.
+				attsize = changecheck(settings['urls'][server],'player_kills_att')
+				defsize = changecheck(settings['urls'][server],'player_kills_def')									#get the current size of the file on the grepolis server.
+				consize = changecheck(settings['urls'][server],'conquers')									#get the current size of the file on the grepolis server.
 				
 				if not server in settings["ghost_scrape"]: settings["ghost_scrape"][server] = [0,int(time())]
 				if server in settings["ghost_scrape"]:
-					townsize = changecheck(__URLS__[server],'towns')
+					townsize = changecheck(settings['urls'][server],'towns')
 					if townsize != settings["ghost_scrape"][server][0]:
 						towncheck = True
 					towncheck = True
 					if towncheck:
 						checklist = {}
 						currtowns = loadfile(server,"towns")
-						getworlddata(server,__URLS__[server],"towns")
+						getworlddata(server,settings['urls'][server],"towns")
 						newtowns = loadfile(server,"towns")
 						for chat in settings["monitorghost"]:
 							try:
@@ -1136,17 +1161,17 @@ def main():
 					if attcheck:
 
 						acurrstats = loadfile(server,"player_kills_att")
-						getworlddata(server,__URLS__[server],"player_kills_att")
+						getworlddata(server,settings['urls'][server],"player_kills_att")
 						anewstats = loadfile(server,"player_kills_att")
 					if defcheck: 
 						
 						dcurrstats = loadfile(server,"player_kills_def")																	#load the current file into mem before download
-						getworlddata(server,__URLS__[server],"player_kills_def")															#download file from server
+						getworlddata(server,settings['urls'][server],"player_kills_def")															#download file from server
 						dnewstats = loadfile(server,"player_kills_def")																	#load updated file into memory
 					if concheck:
 						
 						ccurrstats = loadfile(server,"conquers")
-						getworlddata(server,__URLS__[server],"conquers")
+						getworlddata(server,settings['urls'][server],"conquers")
 						cnewstats = loadfile(server,"conquers")
 						delta = list(set(cnewstats["conquers"]) - set(ccurrstats["conquers"]))
 																												#clear out our checklist
@@ -1257,7 +1282,7 @@ def main():
 										aout = '%s        %s\r\n' % (aout,alert,)
 								for player in aoutlist[chat]["players"]:
 									if len(aoutlist[chat]["players"]) == 0:continue
-									if len(aout) == 0: aout = unicode('(ninja) ABP Alerts!\r\n')
+									if len(aout) == 0: aout = unicode('(punch) ABP Alerts!\r\n')
 									#for alert in doutlist[chat]["players"]:
 									aout = '%s        %s\r\n' % (aout,player,)	
 										
@@ -1274,7 +1299,7 @@ def main():
 							for chat in doutlist:
 								for alliance in doutlist[chat]["alliances"]:
 									if len(doutlist[chat]["alliances"][alliance]) == 0:continue
-									if len(dout) == 0: dout = unicode('(punch) DBP Alerts!\r\n')
+									if len(dout) == 0: dout = unicode('(ninja) DBP Alerts!\r\n')
 									dout = '%s    %s (%s):\r\n' % (dout, alliance_name(server,str(alliance)),server)
 									
 									for alert in doutlist[chat]["alliances"][alliance]:
@@ -1344,7 +1369,7 @@ def main():
 				if settings["world_scrape"][server] <= int(time()):
 					print ("Scraping world files for %s" % (server))
 					try:
-						getworlddata(server,__URLS__[server],"all")
+						getworlddata(server,settings['urls'][server],"all")
 					except Exception:
 						print ('unable to get world files for %s' % (server))
 					settings["world_scrape"][server] = (int(time()) + (60 * 60 * 2))
@@ -1365,7 +1390,7 @@ def main():
 					if not serverplayers[player][1]: continue
 					if not serverplayers[player][1] in alliances: alliances[serverplayers[player][1]] = [] 
 					alliances[serverplayers[player][1]].append(player)
-				getworlddata(server,__URLS__[server],"players")
+				getworlddata(server,settings['urls'][server],"players")
 				newserverplayers = loadfile(server,"players")
 				for player in newserverplayers:
 					
@@ -1415,16 +1440,9 @@ def main():
 			cfgsave(settings)
 			print("[%s] Alliance Member Check Complete" % (ctime()))				
 			allimembercheck = int(time()) + (60 * 60)				
-							
-							
-						
-			
-			
+
 		sleep(.01)
 
 	
 if __name__ == '__main__':
 	main()
-
-
-			
