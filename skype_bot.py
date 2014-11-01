@@ -1093,7 +1093,6 @@ def main():
 					townsize = changecheck(settings['urls'][server],'towns')
 					if townsize != settings["ghost_scrape"][server][0]:
 						towncheck = True
-					towncheck = True
 					if towncheck:
 						checklist = {}
 						currtowns = loadfile(server,"towns")
