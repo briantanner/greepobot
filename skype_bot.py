@@ -317,6 +317,28 @@ def message_status(Message, Status):
 		except:
 			pass
 
+	elif cmd in ( 'ADDOP', ):
+		if Message.FromHandle not in settings["botadmins"]: return
+		if not len(parms):
+			SendMessage('[*] Syntax: ADDOP <user name>')
+		else:
+			settings["botadmins"].append(parms.split()[0])
+			cfgsave(settings)
+			SendMessage('Added %s to bot admins.' % (parms.split()[0]))
+
+	elif cmd in ( 'DELOP', ):
+		if Message.FromHandle not in settings["botadmins"]: return
+		if not len(parms):
+			SendMessage('[*] Syntax: DELOP <user name>')
+		else:
+			settings["botadmins"].remove(parms.split()[0])
+			cfgsave(settings)
+			SendMessage('Removed %s from bot admins.' % (parms.split()[0]))
+
+	elif cmd in ( 'LISTOPS', ):
+		if Message.FromHandle not in settings["botadmins"]: return
+		SendMessage('Bot Admins: %s' % (', '.join(settings["botadmins"])))
+
 	elif cmd in ( 'DELCHAT', ):
 		for member in Message.Chat.Members:
 			if member.Handle == skype.CurrentUserHandle: continue
