@@ -288,6 +288,27 @@ def message_status(Message, Status):
 		except:
 			pass
 	
+	elif cmd in ( 'LISTCHATS', ):
+		if Message.FromHandle not in settings["botadmins"]: return
+		chats = []
+		for chat in settings['monitor']:
+			if chat not in chats:
+				chats.append('%s\r\n' % (chat))
+		for chat in settings['monitorghost']:
+			if chat not in chats:
+				chats.append('%s\r\n' % (chat))
+		SendMessage('Bot Chats: \r\n    %s' % ('    '.join(chats)))
+
+
+	elif cmd in ( 'JOINCHAT', ):
+		if Message.FromHandle not in settings["botadmins"]: return
+		if not len(parms):
+			SendMessage('[*] Syntax: JOINCHAT <chat id>')
+		else:
+			member = skype.User(Message.FromHandle)
+			chat = skype.Chat(parms.split()[0])
+			chat.SendMessage('/add %s' % (Message.FromHandle))
+
 	elif cmd in ( 'KICK', ):
 		if Message.FromHandle not in settings["botadmins"]: return
 		if not len(parms):
