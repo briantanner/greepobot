@@ -58,8 +58,7 @@ class Config:
   def __init__(self, file):
     currdir = os.getcwd()
     self.settings = False
-
-    print Config.defaults
+    
     Config.defaults["urls"] = Config.__URLS__
 
     if os.path.isfile(os.path.join(currdir, file)): #Check for config file
@@ -74,8 +73,9 @@ class Config:
       self.settings = False 
       
     else: #Create new config file
+      print Config.defaults
       with open(os.path.join(currdir, file), 'w') as f:
-        json.dump(config.defaults, f)
+        json.dump(Config.defaults, f)
         #f.write(str(defaultconfig))
       logging.info('Created bot config file %s\%s' %(currdir,file))
       self.settings = Config.default
