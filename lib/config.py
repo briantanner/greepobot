@@ -55,5 +55,3 @@ class Config:
     with open(os.path.join(self.dir, self.file), 'w') as f:
       json.dump(settings, f)
     return
-
-
