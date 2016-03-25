@@ -1,4 +1,5 @@
 import json, os, logging, gzip, Skype4Py, operator, math, socket, datetime
+import lib.config
 from urllib import urlretrieve,unquote_plus
 from urllib2 import Request,urlopen
 from time import time, ctime, sleep
@@ -53,33 +54,33 @@ __URLS__ = {
 }
 defaultconfig = {"territorylimit": {}, "rangelimit": {}, "monitor": {}, "monitorghost": {}, "botadmins": ["dev.lance"], "last_scrape":{}, "world_scrape":{}, "ghost_scrape":{}, "feedback":{}, "urls":__URLS__}
 
-def cfgcheck():   
+# def cfgcheck():   
 	
-	if os.path.isfile(os.path.join(currdir,cfgfile)): #Check for config file
-		#logging.info('Using config file: %s\%s' %(currdir,cfgfile))
-		with open(os.path.join(currdir,cfgfile), 'r') as f:
-			status = json.load(f)
+# 	if os.path.isfile(os.path.join(currdir,cfgfile)): #Check for config file
+# 		#logging.info('Using config file: %s\%s' %(currdir,cfgfile))
+# 		with open(os.path.join(currdir,cfgfile), 'r') as f:
+# 			status = json.load(f)
 			
-	elif os.path.isfile(os.path.join(currdir,"backup",cfgfile+".bak")): #Check for Backup config file
-		#logging.critical('Config file not found, backup file is present in the backup directory. Something bad may have happened.')
-		print("ERROR: Unable to find bot config file in primary location: %s\%s" % (currdir,cfgfile))
-		print("A backup file exists, recover or remove the backup config file and start the server again")
-		status = False 
+# 	elif os.path.isfile(os.path.join(currdir,"backup",cfgfile+".bak")): #Check for Backup config file
+# 		#logging.critical('Config file not found, backup file is present in the backup directory. Something bad may have happened.')
+# 		print("ERROR: Unable to find bot config file in primary location: %s\%s" % (currdir,cfgfile))
+# 		print("A backup file exists, recover or remove the backup config file and start the server again")
+# 		status = False 
 		
-	else: #Create new config file
-		with open(os.path.join(currdir,cfgfile), 'w') as f:
-			json.dump(defaultconfig, f)
-			#f.write(str(defaultconfig))
-		#logging.info('Created bot config file %s\%s' %(currdir,cfgfile))
-		status = defaultconfig
+# 	else: #Create new config file
+# 		with open(os.path.join(currdir,cfgfile), 'w') as f:
+# 			json.dump(defaultconfig, f)
+# 			#f.write(str(defaultconfig))
+# 		#logging.info('Created bot config file %s\%s' %(currdir,cfgfile))
+# 		status = defaultconfig
 	
-	return status
+# 	return status
 
-def cfgsave(settings):  ## save config file with current settings data
-	with open(os.path.join(currdir,cfgfile), 'w') as f:
-		json.dump(settings, f)
-	status = True
-	return status
+# def cfgsave(settings):  ## save config file with current settings data
+# 	with open(os.path.join(currdir,cfgfile), 'w') as f:
+# 		json.dump(settings, f)
+# 	status = True
+# 	return status
 
 
 def loadfile(server,datatype):  ### open gzip world file and read into memory
@@ -144,7 +145,7 @@ def getworlddata(server, url, datatype):
 			
 			if server not in settings["world_scrape"]: settings["world_scrape"][server] = []
 			settings["world_scrape"][server] = (int(time()))
-			cfgsave(settings)
+			config.save(settings)
 		else: urlretrieve('%s/data/%s.txt.gz' % (url,datatype),'%s/%s/%s-%s.txt.gz' % (currdir,datadir,server,datatype))
 			  
 	except ValueError, e:
@@ -344,7 +345,7 @@ def message_status(Message, Status):
 			SendMessage('[*] Syntax: ADDOP <user name>')
 		else:
 			settings["botadmins"].append(parms.split()[0])
-			cfgsave(settings)
+			config.save(settings)
 			SendMessage('Added %s to bot admins.' % (parms.split()[0]))
 
 	elif cmd in ( 'DELOP', ):
@@ -353,7 +354,7 @@ def message_status(Message, Status):
 			SendMessage('[*] Syntax: DELOP <user name>')
 		else:
 			settings["botadmins"].remove(parms.split()[0])
-			cfgsave(settings)
+			config.save(settings)
 			SendMessage('Removed %s from bot admins.' % (parms.split()[0]))
 
 	elif cmd in ( 'LISTOPS', ):
@@ -373,7 +374,7 @@ def message_status(Message, Status):
 			SendMessage('[*] Syntax: ADDWORLD <server> <name>')
 		else:
 			settings['urls'][parms.split()[1]] = ("http://%s.grepolis.com" % parms.split()[0])
-			cfgsave(settings)
+			config.save(settings)
 			SendMessage('World %s added with url %s' % (parms.split()[1], "http://%s.grepolis.com" % parms.split()[0]))
 
 	elif cmd in ( 'DELWORLD', ):
@@ -383,7 +384,7 @@ def message_status(Message, Status):
 		else:
 			if parms.split()[0] in settings['urls']:
 				settings['urls'].pop(parms.split()[0], None)
-				cfgsave(settings)
+				config.save(settings)
 				SendMessage('Deleted world %s.' % (parms.split()[0]))
 
 	elif cmd in ( 'LISTWORLDS', ):
@@ -405,7 +406,7 @@ def message_status(Message, Status):
 			today = datetime.date.today().strftime('%m/%d/%Y')
 			print parms
 			settings['botstatus'] = '%s: %s\r\n' % (today, parms)
-			cfgsave(settings)
+			config.save(settings)
 			SendMessage('Updated bot status.')
 
 	elif cmd in ( 'BROADCAST',):  #### Need to fix this when no params are given it crashes. Add help as well.  Also need to fix chat room removal first.  Bot should cleanup chat rooms that do not have any monitors from its list.
@@ -428,7 +429,7 @@ def message_status(Message, Status):
 				elif len(settings["feedback"][Message.FromHandle]) < 6 : 
 					SendMessage('Thank you %s for your message it has been logged ' % (Message.FromHandle))
 					settings["feedback"][Message.FromHandle].append(' '.join(parms.split()[0:]))
-					cfgsave(settings)
+					config.save(settings)
 
 	elif cmd in ('MONITORGHOST',):
 		activeservers = getactiveservers()
@@ -467,7 +468,7 @@ def message_status(Message, Status):
 
 				SendMessage('[*] Monitor Enabled for this channel. Repeat this command to disable.')
 
-			cfgsave(settings)
+			config.save(settings)
 
 	elif cmd in ('MONITOR',):
 		activeservers = getactiveservers()
@@ -515,7 +516,7 @@ def message_status(Message, Status):
 					settings['monitor'][Message.Chat.Name][server].append(found)
 					SendMessage('[*] Monitor Enabled for this channel. Repeat this command to disable.')
 			
-			cfgsave(settings)
+			config.save(settings)
 	elif cmd in ('MONITORLIST',):
 		if len(parms.split()) == 1:
 			if parms.split()[0].lower() == "help" or parms.split()[0].lower() == '?':
@@ -666,7 +667,7 @@ def message_status(Message, Status):
 			if limit > 100: limit = 100
 			settings['territorylimit'][Message.Chat.Name] = limit
 			SendMessage('[*] Territory Limit Updated: %d%s' % (settings['territorylimit'][Message.Chat.Name],'%'))
-			cfgsave(settings)
+			config.save(settings)
 		else:
 			SendMessage('[*] Syntax: TERRITORYLIMIT <percent|ALL>')
 	elif cmd in ('RANGELIMIT',):
@@ -680,7 +681,7 @@ def message_status(Message, Status):
 			if limit > 999: limit = 999
 			settings['rangelimit'][Message.Chat.Name] = limit
 			SendMessage('[*] Range Limit Updated: %d\r\n *Rangelimit used by TERRITORY command' % (settings['rangelimit'][Message.Chat.Name]))
-			cfgsave(settings)
+			config.save(settings)
 		else:
 			SendMessage('[*] Syntax: RANGELIMIT <distance|ALL>')
 	
@@ -1075,7 +1076,7 @@ def message_status(Message, Status):
 def main():
 	global settings
 	activeservers = []
-	settings = cfgcheck()
+	settings = config(cfgfile)
 	skype.Attach()
 	print('Skype attached.')
 	print(skype.CurrentUser.FullName)
@@ -1091,7 +1092,7 @@ def main():
 	
 	if 'urls' not in settings:
 		settings['urls'] = __URLS__
-		cfgsave(settings)
+		config.save(settings)
 	
 	while True:
 		if nextscrape <= int(time()): 		##Is it time to check for updated world defbp and conq files?
@@ -1397,7 +1398,7 @@ def main():
 						for chat in delchat:
 							print ("Deleting Chatroom %s from Monitor because no longer subscribed" % (skype.Chat(chat).FriendlyName))
 							del settings["monitor"][chat]
-				cfgsave(settings)
+				config.save(settings)
 				delchat = []
 			print ("[%s] Check Complete" % (ctime()))
 			nextscrape = int(time()) + (60*5)		
@@ -1415,7 +1416,7 @@ def main():
 					except Exception:
 						print ('unable to get world files for %s' % (server))
 					settings["world_scrape"][server] = (int(time()) + (60 * 60 * 2))
-					cfgsave(settings)
+					config.save(settings)
 			print (" [%s] World File Check Complete" % (ctime()))
 			worldfilecheck = int(time()) + (60 * 20)
 		
@@ -1479,7 +1480,7 @@ def main():
 					print ("Deleting Chatroom %s from Monitor because no longer subscribed" % (skype.Chat(chat).FriendlyName))
 					del settings["monitor"][chat]
 			delchat = []
-			cfgsave(settings)
+			config.save(settings)
 			print("[%s] Alliance Member Check Complete" % (ctime()))				
 			allimembercheck = int(time()) + (60 * 60)				
 
