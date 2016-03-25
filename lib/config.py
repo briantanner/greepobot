@@ -42,7 +42,7 @@ class Config:
     'olympia':'http://us39.grepolis.com'
   }
 
-  default = {
+  defaults = {
     "territorylimit": {},
     "rangelimit": {},
     "monitor": {},
@@ -52,36 +52,41 @@ class Config:
     "world_scrape": {},
     "ghost_scrape": {},
     "feedback": {},
-    "urls": Config.__URLS__
+    "urls": {}
   }
 
   def __init__(self, file):
     currdir = os.getcwd()
-    settings = False
+    self.settings = False
+
+    print Config.defaults
+    Config.defaults["urls"] = Config.__URLS__
 
     if os.path.isfile(os.path.join(currdir, file)): #Check for config file
       logging.info('Using config file: %s\%s' %(currdir,file))
       with open(os.path.join(currdir,file), 'r') as f:
-        settings = json.load(f)
+        self.settings = json.load(f)
         
     elif os.path.isfile(os.path.join(currdir,"backup", file+".bak")): #Check for Backup config file
       logging.critical('Config file not found, backup file is present in the backup directory. Something bad may have happened.')
       # print("ERROR: Unable to find bot config file in primary location: %s\%s" % (currdir,file))
       # print("A backup file exists, recover or remove the backup config file and start the server again")
-      settings = False 
+      self.settings = False 
       
     else: #Create new config file
       with open(os.path.join(currdir, file), 'w') as f:
-        json.dump(defaultconfig, f)
+        json.dump(config.defaults, f)
         #f.write(str(defaultconfig))
       logging.info('Created bot config file %s\%s' %(currdir,file))
-      settings = Config.default
+      self.settings = Config.default
 
-    return settings
+  def get(self):
+    return self.settings
 
   def save(self, settings):
+    self.settings = settings
     with open(os.path.join(currdir,cfgfile), 'w') as f:
       json.dump(settings, f)
-    return True
+    return
 
 
